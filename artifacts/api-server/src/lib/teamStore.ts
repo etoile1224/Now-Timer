@@ -130,11 +130,63 @@ export function getTeam(code: string): TeamData | undefined {
   return teams.get(code.toUpperCase());
 }
 
+async function loadTeamFromDb(upperCode: string): Promise<TeamData | null> {
+  type TeamRow = { id: string; code: string };
+  type MemberRow = {
+    id: string; team_code: string; nickname: string; status: string;
+    ignore_level: number; now_count: number; dismissed_count: number;
+    last_seen: string; today_date: string; avg_reaction_ms: number; reaction_count: number;
+  };
+  type TokenRow = { token: string; member_id: string };
+
+  const teamRow = await db.queryOne<TeamRow>(
+    'SELECT id, code FROM teams WHERE code = $1',
+    [upperCode],
+  );
+  if (!teamRow) return null;
+
+  const team: TeamData = { id: teamRow.id, code: teamRow.code, members: {} };
+
+  const [memberRows, tokenRows] = await Promise.all([
+    db.query<MemberRow>(
+      `SELECT id, team_code, nickname, status, ignore_level, now_count,
+              dismissed_count, last_seen, today_date, avg_reaction_ms, reaction_count
+       FROM team_members WHERE team_code = $1`,
+      [upperCode],
+    ),
+    db.query<TokenRow>(
+      'SELECT token, member_id FROM member_tokens WHERE member_id IN (SELECT id FROM team_members WHERE team_code = $1)',
+      [upperCode],
+    ),
+  ]);
+
+  for (const m of memberRows) {
+    team.members[m.id] = {
+      id: m.id, nickname: m.nickname, status: m.status as MemberStatus,
+      ignoreLevel: Number(m.ignore_level), nowCount: Number(m.now_count),
+      dismissedCount: Number(m.dismissed_count), lastSeen: m.last_seen,
+      todayDate: m.today_date, avgReactionMs: Number(m.avg_reaction_ms),
+      reactionCount: Number(m.reaction_count),
+    };
+  }
+  for (const t of tokenRows) {
+    memberTokens.set(t.member_id, t.token);
+  }
+
+  teams.set(team.code, team);
+  console.log(`[teamStore] Lazy-loaded team ${team.code} from DB`);
+  return team;
+}
+
 export async function joinTeam(
   code: string,
   nickname: string,
 ): Promise<{ team: TeamData; member: Member; token: string } | null> {
-  const team = teams.get(code.toUpperCase());
+  const upper = code.toUpperCase();
+  let team = teams.get(upper);
+  if (!team) {
+    team = await loadTeamFromDb(upper) ?? undefined;
+  }
   if (!team) return null;
 
   const member: Member = {
