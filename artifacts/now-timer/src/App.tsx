@@ -32,6 +32,7 @@ function Router() {
         <Route path="/social" component={SocialPage} />
         <Route path="/stats" component={StatsPage} />
         <Route path="/settings" component={SettingsPage} />
+        <Route path="/capture/:lv" component={MockupCapturePage} />
         <Route component={NotFound} />
       </Switch>
       <NavBar />
