@@ -12,3 +12,9 @@ id = "sbZtBymW0-KnXf2I556QC"
 uri = "file://now-timer-code-review.zip"
 type = "unspecified"
 title = "NOW! Timer — 코드 리뷰용 ZIP (Phase 3 완료)"
+
+[[outputs]]
+id = "93WLcnLdm3wummAg1MhTo"
+uri = "file://now-timer-review.tar.gz"
+type = "unspecified"
+title = "NOW!! Pomodoro — 소스코드 리뷰용"
