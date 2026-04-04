@@ -43,7 +43,7 @@ const DEV_SECONDS = 5;
 
 export function TimerProvider({ children }: { children: React.ReactNode }) {
   const [settings, setSettings] = useState<TimerSettings>(loadSettings);
-  const [phase, setPhase] = useState<TimerPhase>('focusing');
+  const [phase, setPhase] = useState<TimerPhase>('idle');
   const [sessionCount, setSessionCount] = useState(0);
   const [isLongBreak, setIsLongBreak] = useState(false);
   const [devMode, setDevMode] = useState(false);

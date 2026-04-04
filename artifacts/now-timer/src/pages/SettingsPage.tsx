@@ -132,12 +132,6 @@ function NotificationSection() {
 
 export function SettingsPage() {
   const { settings, updateSettings, devMode, toggleDevMode } = useTimer();
-  const [saved, setSaved] = useState(false);
-
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  };
 
   return (
     <div className="min-h-screen bg-background pb-24">
@@ -145,17 +139,10 @@ export function SettingsPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-xl font-bold text-foreground">설정</h1>
-          <button
-            onClick={handleSave}
-            className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
-              saved
-                ? 'bg-green-100 text-green-700'
-                : 'bg-primary text-primary-foreground'
-            }`}
-          >
-            {saved && <Check size={14} />}
-            {saved ? '저장됨' : '저장'}
-          </button>
+          <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium text-muted-foreground bg-muted">
+            <Check size={12} />
+            자동 저장
+          </span>
         </div>
 
         {/* DEV MODE */}

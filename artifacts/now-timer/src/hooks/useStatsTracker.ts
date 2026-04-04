@@ -56,5 +56,5 @@ export function useStatsTracker(opts?: UseStatsTrackerOptions) {
     if (breakDone) {
       addSession({ date: todayStr(), completedAt: Date.now(), type: 'break' });
     }
-  });
+  }, [phase, ignoreLevel]);
 }

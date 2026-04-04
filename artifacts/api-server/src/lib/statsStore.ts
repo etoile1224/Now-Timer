@@ -1,3 +1,6 @@
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { resolve } from 'path';
+
 function kstDateStr(d: Date): string {
   return new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Seoul',
@@ -43,6 +46,52 @@ const sessionsByMember = new Map<string, SessionRecord[]>();
 const reactionsByMember = new Map<string, ReactionRecord[]>();
 const complianceByMember = new Map<string, DailyCompliance[]>();
 
+const DATA_DIR = resolve(process.cwd(), 'data');
+const STATS_FILE = resolve(DATA_DIR, 'stats.json');
+
+function ensureDataDir(): void {
+  if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
+}
+
+function persist(): void {
+  try {
+    ensureDataDir();
+    const payload = {
+      sessions: Object.fromEntries(sessionsByMember),
+      reactions: Object.fromEntries(reactionsByMember),
+      compliance: Object.fromEntries(complianceByMember),
+    };
+    writeFileSync(STATS_FILE, JSON.stringify(payload));
+  } catch (err) {
+    console.error('[statsStore] persist failed:', err);
+  }
+}
+
+function loadPersisted(): void {
+  if (!existsSync(STATS_FILE)) return;
+  try {
+    const raw = readFileSync(STATS_FILE, 'utf-8');
+    const data = JSON.parse(raw) as {
+      sessions?: Record<string, SessionRecord[]>;
+      reactions?: Record<string, ReactionRecord[]>;
+      compliance?: Record<string, DailyCompliance[]>;
+    };
+    for (const [k, v] of Object.entries(data.sessions ?? {})) {
+      sessionsByMember.set(k, v);
+    }
+    for (const [k, v] of Object.entries(data.reactions ?? {})) {
+      reactionsByMember.set(k, v);
+    }
+    for (const [k, v] of Object.entries(data.compliance ?? {})) {
+      complianceByMember.set(k, v);
+    }
+  } catch (err) {
+    console.error('[statsStore] loadPersisted failed:', err);
+  }
+}
+
+loadPersisted();
+
 function getSessions(memberId: string): SessionRecord[] {
   if (!sessionsByMember.has(memberId)) sessionsByMember.set(memberId, []);
   return sessionsByMember.get(memberId)!;
@@ -62,6 +111,7 @@ export function addSession(memberId: string, type: 'work' | 'break'): void {
   const arr = getSessions(memberId);
   arr.push({ date: todayKst(), completedAt: Date.now(), type });
   if (arr.length > MAX_RECORDS) arr.splice(0, arr.length - MAX_RECORDS);
+  persist();
 }
 
 export function trackAlertEntry(memberId: string): void {
@@ -74,6 +124,7 @@ export function trackAlertEntry(memberId: string): void {
     if (arr.length > 90) arr.splice(0, arr.length - 90);
   }
   entry.alerts += 1;
+  persist();
 }
 
 export function trackDismissal(memberId: string): void {
@@ -85,6 +136,7 @@ export function trackDismissal(memberId: string): void {
     arr.push(entry);
   }
   entry.dismissed += 1;
+  persist();
 }
 
 export function addReaction(
@@ -95,6 +147,7 @@ export function addReaction(
   const arr = getReactions(memberId);
   arr.push({ date: todayKst(), reactionMs, dismissed });
   if (arr.length > MAX_RECORDS) arr.splice(0, arr.length - MAX_RECORDS);
+  persist();
 }
 
 export interface DailyStat {

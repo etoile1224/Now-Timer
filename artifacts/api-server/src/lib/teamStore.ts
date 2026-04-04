@@ -1,14 +1,16 @@
 import { randomBytes } from 'crypto';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { resolve } from 'path';
 import type { Response } from 'express';
 import * as statsStore from './statsStore';
 
 function todayKst(): string {
-  return new Date().toLocaleDateString('ko-KR', {
+  return new Intl.DateTimeFormat('en-CA', {
     timeZone: 'Asia/Seoul',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
-  });
+  }).format(new Date());
 }
 
 export type MemberStatus =
@@ -46,6 +48,47 @@ const sseClients = new Map<
 
 const CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
+const DATA_DIR = resolve(process.cwd(), 'data');
+const TEAMS_FILE = resolve(DATA_DIR, 'teams.json');
+
+function ensureDataDir(): void {
+  if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
+}
+
+function persist(): void {
+  try {
+    ensureDataDir();
+    const payload = {
+      teams: Object.fromEntries(teams),
+      memberTokens: Object.fromEntries(memberTokens),
+    };
+    writeFileSync(TEAMS_FILE, JSON.stringify(payload));
+  } catch (err) {
+    console.error('[teamStore] persist failed:', err);
+  }
+}
+
+function loadPersisted(): void {
+  if (!existsSync(TEAMS_FILE)) return;
+  try {
+    const raw = readFileSync(TEAMS_FILE, 'utf-8');
+    const data = JSON.parse(raw) as {
+      teams?: Record<string, TeamData>;
+      memberTokens?: Record<string, string>;
+    };
+    for (const [k, v] of Object.entries(data.teams ?? {})) {
+      teams.set(k, v);
+    }
+    for (const [k, v] of Object.entries(data.memberTokens ?? {})) {
+      memberTokens.set(k, v);
+    }
+  } catch (err) {
+    console.error('[teamStore] loadPersisted failed:', err);
+  }
+}
+
+loadPersisted();
+
 function genCode(): string {
   return Array.from({ length: 6 }, () =>
     CHARS[Math.floor(Math.random() * CHARS.length)],
@@ -75,6 +118,7 @@ export function createTeam(): TeamData {
   do { code = genCode(); } while (teams.has(code));
   const team: TeamData = { id: genId(), code, members: {} };
   teams.set(code, team);
+  persist();
   return team;
 }
 
@@ -105,6 +149,7 @@ export function joinTeam(
   const token = randomBytes(16).toString('hex');
   team.members[member.id] = member;
   memberTokens.set(member.id, token);
+  persist();
   broadcast(team.code, { type: 'join', member });
   return { team, member, token };
 }
@@ -179,6 +224,7 @@ export function updateStatus(
     statsStore.addSession(memberId, 'break');
   }
 
+  persist();
   broadcast(team.code, { type: 'status', member: { ...member }, prevIgnoreLevel });
   return { team, member };
 }

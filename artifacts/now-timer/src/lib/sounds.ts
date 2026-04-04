@@ -13,6 +13,7 @@ function getAudio(): HTMLAudioElement {
 
 function playOnce(volume: number): void {
   const a = getAudio();
+  a.loop = false;
   a.pause();
   a.currentTime = 0;
   a.volume = Math.min(1, Math.max(0, volume));
@@ -26,8 +27,8 @@ export function stopAlert(): void {
     loopTimer = null;
   }
   const a = getAudio();
+  a.loop = false;
   a.pause();
-  a.onended = null;
 }
 
 /**
@@ -52,19 +53,14 @@ export function playAlert(_soundType: string, volume: number, level = 1): void {
       if (isLooping) playOnce(vol2);
     }, 3000);
   } else {
-    // Lv.3: loop continuously
+    // Lv.3: use native loop for mobile Safari compatibility
     isLooping = true;
     const a = getAudio();
     a.pause();
     a.currentTime = 0;
     a.volume = vol3;
+    a.loop = true;
     a.play().catch(() => {});
-    a.onended = () => {
-      if (isLooping) {
-        a.currentTime = 0;
-        a.play().catch(() => {});
-      }
-    };
   }
 }
 
