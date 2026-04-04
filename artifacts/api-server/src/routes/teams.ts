@@ -23,7 +23,11 @@ router.post('/teams/join', (req, res) => {
     res.status(404).json({ error: 'Team not found' });
     return;
   }
-  res.status(201).json({ memberId: result.member.id, team: result.team });
+  res.status(201).json({
+    memberId: result.member.id,
+    memberToken: result.token,
+    team: result.team,
+  });
 });
 
 router.get('/teams/:code', (req, res) => {
@@ -36,6 +40,12 @@ router.get('/teams/:code', (req, res) => {
 });
 
 router.patch('/members/:id', (req, res) => {
+  const token = req.headers['x-member-token'] as string | undefined;
+  if (!token || !store.verifyToken(req.params.id, token)) {
+    res.status(401).json({ error: 'Invalid or missing member token' });
+    return;
+  }
+
   const { status, ignoreLevel } = req.body as {
     status?: MemberStatus;
     ignoreLevel?: number;
@@ -53,6 +63,12 @@ router.patch('/members/:id', (req, res) => {
 });
 
 router.post('/members/:fromId/poke/:toId', (req, res) => {
+  const token = req.headers['x-member-token'] as string | undefined;
+  if (!token || !store.verifyToken(req.params.fromId, token)) {
+    res.status(401).json({ error: 'Invalid or missing member token' });
+    return;
+  }
+
   const ok = store.pokeMember(req.params.fromId, req.params.toId);
   if (!ok) {
     res.status(404).json({ error: 'Member not found' });

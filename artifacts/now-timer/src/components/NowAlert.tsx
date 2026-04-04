@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTimer } from '@/context/TimerContext';
 
@@ -101,6 +102,15 @@ export function NowAlert({ type }: NowAlertProps) {
   const lv = getLv(level);
 
   const isWork = type === 'work';
+
+  useEffect(() => {
+    if (level < 3) return;
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    const body = isWork ? '쉴 시간이에요! 지금 당장 확인하세요!' : '집중할 시간이에요! 지금 당장 돌아오세요!';
+    const n = new Notification('NOW!!!', { body, tag: 'now-timer-lv3' });
+    return () => n.close();
+  }, [level, isWork]);
+
   const subText = isWork
     ? isLongBreak
       ? '긴 휴식 시간이에요!'

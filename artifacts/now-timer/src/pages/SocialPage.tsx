@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useSearch } from 'wouter';
+import { QRCodeSVG } from 'qrcode.react';
 import { useSocial } from '@/context/SocialContext';
 import type { Member } from '@/lib/api';
 import {
@@ -9,6 +11,7 @@ import {
   LogOut,
   Bell,
   Zap,
+  QrCode,
 } from 'lucide-react';
 
 function statusLabel(m: Member): { text: string; color: string } {
@@ -122,6 +125,11 @@ function TeamStats({
 function TeamView() {
   const { teamCode, memberId, members, poke, leaveTeam } = useSocial();
   const [copied, setCopied] = useState(false);
+  const [showQr, setShowQr] = useState(false);
+
+  const joinUrl = teamCode
+    ? `${window.location.origin}/social?join=${teamCode}`
+    : '';
 
   const copyCode = () => {
     if (!teamCode) return;
@@ -157,6 +165,14 @@ function TeamView() {
             {copied ? '복사됨' : '복사'}
           </button>
           <button
+            onClick={() => setShowQr((v) => !v)}
+            className={`flex items-center gap-1 px-3 py-2 rounded-xl text-sm font-medium transition-colors ${
+              showQr ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <QrCode size={16} />
+          </button>
+          <button
             onClick={leaveTeam}
             className="flex items-center gap-1 px-3 py-2 rounded-xl text-sm font-medium text-muted-foreground hover:text-destructive transition-colors"
           >
@@ -166,6 +182,26 @@ function TeamView() {
         <p className="text-xs text-muted-foreground mt-2">
           이 코드를 공유해서 팀원을 초대하세요
         </p>
+
+        <AnimatePresence>
+          {showQr && joinUrl && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="mt-4 flex flex-col items-center gap-2">
+                <div className="bg-white p-3 rounded-2xl shadow-sm">
+                  <QRCodeSVG value={joinUrl} size={160} />
+                </div>
+                <p className="text-xs text-muted-foreground text-center">
+                  QR 코드를 스캔하면 바로 팀에 참가해요
+                </p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {memberId && (
@@ -198,9 +234,13 @@ type JoinView = 'landing' | 'create' | 'join';
 
 function LandingView() {
   const { createTeam, joinTeam } = useSocial();
-  const [view, setView] = useState<JoinView>('landing');
+  const search = useSearch();
+  const params = new URLSearchParams(search);
+  const urlCode = params.get('join')?.toUpperCase() ?? '';
+
+  const [view, setView] = useState<JoinView>(urlCode ? 'join' : 'landing');
   const [nickname, setNickname] = useState('');
-  const [code, setCode] = useState('');
+  const [code, setCode] = useState(urlCode);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -315,6 +355,37 @@ function LandingView() {
         {loading ? '처리 중...' : view === 'create' ? '팀 만들기' : '참가하기'}
       </button>
     </div>
+  );
+}
+
+export function PeerAlertToast() {
+  const { peerAlertMsg, clearPeerAlert } = useSocial();
+
+  useEffect(() => {
+    if (!peerAlertMsg) return;
+    const t = setTimeout(clearPeerAlert, 6000);
+    return () => clearTimeout(t);
+  }, [peerAlertMsg, clearPeerAlert]);
+
+  return (
+    <AnimatePresence>
+      {peerAlertMsg && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: 20 }}
+          className="fixed bottom-24 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none"
+        >
+          <div className="flex items-center gap-2 bg-orange-600 text-white px-4 py-2.5 rounded-2xl shadow-lg text-sm font-semibold pointer-events-auto max-w-xs">
+            <Zap size={15} className="shrink-0" />
+            <span className="truncate">{peerAlertMsg}</span>
+            <button onClick={clearPeerAlert} className="ml-1 opacity-70 hover:opacity-100 shrink-0">
+              ✕
+            </button>
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
   );
 }
 

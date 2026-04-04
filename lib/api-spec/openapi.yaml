@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: teams
+    description: Team and social operations
 paths:
   /healthz:
     get:
@@ -24,6 +26,169 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /teams:
+    post:
+      operationId: createTeam
+      tags: [teams]
+      summary: Create a new team
+      description: Creates a new focus team with a 6-character code
+      responses:
+        "201":
+          description: Team created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateTeamResponse"
+
+  /teams/join:
+    post:
+      operationId: joinTeam
+      tags: [teams]
+      summary: Join an existing team
+      description: Join a team by code with a nickname. Returns a member token for subsequent requests.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JoinTeamRequest"
+      responses:
+        "201":
+          description: Successfully joined
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JoinTeamResponse"
+        "400":
+          description: Missing code or nickname
+        "404":
+          description: Team not found
+
+  /teams/{code}:
+    get:
+      operationId: getTeam
+      tags: [teams]
+      summary: Get team state
+      description: Returns the current team with all member statuses
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Team state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetTeamResponse"
+        "404":
+          description: Team not found
+
+  /teams/{code}/stream:
+    get:
+      operationId: teamStream
+      tags: [teams]
+      summary: SSE stream for real-time team updates
+      description: |
+        Server-Sent Events stream. Events have a `data` field with JSON payload.
+        Event types: `init` (full team state on connect), `status` (member update),
+        `join` (new member joined), `poke` (poke notification).
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: memberId
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: SSE stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        "404":
+          description: Team not found
+
+  /members/{id}:
+    patch:
+      operationId: updateMemberStatus
+      tags: [teams]
+      summary: Update member status
+      description: Update the current status and ignore level of a member. Requires X-Member-Token header.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: X-Member-Token
+          in: header
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateStatusRequest"
+      responses:
+        "200":
+          description: Updated member
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UpdateStatusResponse"
+        "401":
+          description: Invalid or missing member token
+        "404":
+          description: Member not found
+
+  /members/{fromId}/poke/{toId}:
+    post:
+      operationId: pokeMember
+      tags: [teams]
+      summary: Poke a teammate
+      description: Send a poke notification to a teammate. Requires X-Member-Token header matching fromId.
+      parameters:
+        - name: fromId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: toId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: X-Member-Token
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Poke sent
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+        "401":
+          description: Invalid or missing member token
+        "404":
+          description: Member not found
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +199,114 @@ components:
       required:
         - status
 
+    Member:
+      type: object
+      properties:
+        id:
+          type: string
+        nickname:
+          type: string
+        status:
+          type: string
+          enum: [idle, focusing, breaking, nowAlert, returnAlert]
+        ignoreLevel:
+          type: integer
+        nowCount:
+          type: integer
+          description: Total number of NOW! alerts received today
+        dismissedCount:
+          type: integer
+          description: Number of alerts dismissed on first notification (compliance metric)
+        lastSeen:
+          type: string
+          format: date-time
+      required:
+        - id
+        - nickname
+        - status
+        - ignoreLevel
+        - nowCount
+        - dismissedCount
+        - lastSeen
+
+    Team:
+      type: object
+      properties:
+        id:
+          type: string
+        code:
+          type: string
+          description: 6-character uppercase team code
+        members:
+          type: object
+          additionalProperties:
+            $ref: "#/components/schemas/Member"
+      required:
+        - id
+        - code
+        - members
+
+    CreateTeamResponse:
+      type: object
+      properties:
+        code:
+          type: string
+        teamId:
+          type: string
+      required:
+        - code
+        - teamId
+
+    JoinTeamRequest:
+      type: object
+      properties:
+        code:
+          type: string
+        nickname:
+          type: string
+      required:
+        - code
+        - nickname
+
+    JoinTeamResponse:
+      type: object
+      properties:
+        memberId:
+          type: string
+        memberToken:
+          type: string
+          description: Secret token to use in X-Member-Token header for subsequent requests
+        team:
+          $ref: "#/components/schemas/Team"
+      required:
+        - memberId
+        - memberToken
+        - team
+
+    GetTeamResponse:
+      type: object
+      properties:
+        team:
+          $ref: "#/components/schemas/Team"
+      required:
+        - team
+
+    UpdateStatusRequest:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [idle, focusing, breaking, nowAlert, returnAlert]
+        ignoreLevel:
+          type: integer
+          minimum: 0
+      required:
+        - status
+
+    UpdateStatusResponse:
+      type: object
+      properties:
+        member:
+          $ref: "#/components/schemas/Member"
+      required:
+        - member

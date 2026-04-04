@@ -18,10 +18,15 @@ async function request<T>(
   method: string,
   path: string,
   body?: unknown,
+  token?: string,
 ): Promise<T> {
+  const headers: Record<string, string> = {};
+  if (body) headers['Content-Type'] = 'application/json';
+  if (token) headers['X-Member-Token'] = token;
+
   const res = await fetch(`/api${path}`, {
     method,
-    headers: body ? { 'Content-Type': 'application/json' } : {},
+    headers,
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
   if (!res.ok) {
@@ -39,7 +44,7 @@ export const api = {
   joinTeam(
     code: string,
     nickname: string,
-  ): Promise<{ memberId: string; team: TeamData }> {
+  ): Promise<{ memberId: string; memberToken: string; team: TeamData }> {
     return request('POST', '/teams/join', { code, nickname });
   },
 
@@ -47,13 +52,16 @@ export const api = {
     return request('GET', `/teams/${code}`);
   },
 
-  updateStatus(memberId: string, status: string, ignoreLevel: number): void {
-    request('PATCH', `/members/${memberId}`, { status, ignoreLevel }).catch(
-      () => {},
-    );
+  updateStatus(
+    memberId: string,
+    status: string,
+    ignoreLevel: number,
+    token: string,
+  ): void {
+    request('PATCH', `/members/${memberId}`, { status, ignoreLevel }, token).catch(() => {});
   },
 
-  poke(fromId: string, toId: string): Promise<void> {
-    return request('POST', `/members/${fromId}/poke/${toId}`);
+  poke(fromId: string, toId: string, token: string): Promise<void> {
+    return request('POST', `/members/${fromId}/poke/${toId}`, undefined, token);
   },
 };

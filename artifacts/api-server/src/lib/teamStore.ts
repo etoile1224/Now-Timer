@@ -25,6 +25,7 @@ export interface TeamData {
 }
 
 const teams = new Map<string, TeamData>();
+const memberTokens = new Map<string, string>();
 const sseClients = new Map<
   string,
   Set<{ res: Response; memberId: string }>
@@ -71,9 +72,10 @@ export function getTeam(code: string): TeamData | undefined {
 export function joinTeam(
   code: string,
   nickname: string,
-): { team: TeamData; member: Member } | null {
+): { team: TeamData; member: Member; token: string } | null {
   const team = teams.get(code.toUpperCase());
   if (!team) return null;
+
   const member: Member = {
     id: genId(),
     nickname: nickname.slice(0, 20),
@@ -83,9 +85,16 @@ export function joinTeam(
     dismissedCount: 0,
     lastSeen: new Date().toISOString(),
   };
+
+  const token = randomBytes(16).toString('hex');
   team.members[member.id] = member;
+  memberTokens.set(member.id, token);
   broadcast(team.code, { type: 'join', member });
-  return { team, member };
+  return { team, member, token };
+}
+
+export function verifyToken(memberId: string, token: string): boolean {
+  return memberTokens.get(memberId) === token;
 }
 
 export function getMember(
@@ -117,13 +126,14 @@ export function updateStatus(
     (status === 'focusing' || status === 'breaking') &&
     member.ignoreLevel <= 1;
 
+  const prevIgnoreLevel = member.ignoreLevel;
   member.status = status;
   member.ignoreLevel = ignoreLevel;
   member.lastSeen = new Date().toISOString();
   if (isEntering) member.nowCount += 1;
   if (isDismissedOnTime) member.dismissedCount += 1;
 
-  broadcast(team.code, { type: 'status', member: { ...member } });
+  broadcast(team.code, { type: 'status', member: { ...member }, prevIgnoreLevel });
   return { team, member };
 }
 

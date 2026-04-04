@@ -16,7 +16,9 @@ interface SocialState {
   nickname: string | null;
   members: Record<string, Member>;
   pokeFrom: string | null;
+  peerAlertMsg: string | null;
   clearPoke: () => void;
+  clearPeerAlert: () => void;
   createTeam: (nickname: string) => Promise<string>;
   joinTeam: (code: string, nickname: string) => Promise<void>;
   leaveTeam: () => void;
@@ -36,15 +38,20 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
 
   const [teamCode, setTeamCode] = useState<string | null>(null);
   const [memberId, setMemberId] = useState<string | null>(null);
+  const [memberToken, setMemberToken] = useState<string | null>(null);
   const [nickname, setNickname] = useState<string | null>(null);
   const [members, setMembers] = useState<Record<string, Member>>({});
   const [pokeFrom, setPokeFrom] = useState<string | null>(null);
+  const [peerAlertMsg, setPeerAlertMsg] = useState<string | null>(null);
+
   const esRef = useRef<EventSource | null>(null);
   const memberIdRef = useRef<string | null>(null);
+  const membersRef = useRef<Record<string, Member>>({});
+  const memberTokenRef = useRef<string | null>(null);
 
-  useEffect(() => {
-    memberIdRef.current = memberId;
-  }, [memberId]);
+  useEffect(() => { memberIdRef.current = memberId; }, [memberId]);
+  useEffect(() => { membersRef.current = members; }, [members]);
+  useEffect(() => { memberTokenRef.current = memberToken; }, [memberToken]);
 
   useEffect(() => {
     const saved = getSavedTeam();
@@ -52,6 +59,7 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
       setTeamCode(saved.code);
       setMemberId(saved.memberId);
       setNickname(saved.nickname);
+      setMemberToken(saved.token);
     }
   }, []);
 
@@ -77,18 +85,36 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
             type: string;
             team?: { members: Record<string, Member> };
             member?: Member;
+            prevIgnoreLevel?: number;
             toMemberId?: string;
             fromNickname?: string;
           };
+
           if (event.type === 'init' && event.team) {
             setMembers({ ...event.team.members });
           } else if (
             (event.type === 'status' || event.type === 'join') &&
             event.member
           ) {
+            const incomingMember = event.member;
+            const prevMember = membersRef.current[incomingMember.id];
+            const prevLevel = prevMember?.ignoreLevel ?? 0;
+            const newLevel = incomingMember.ignoreLevel;
+
+            if (incomingMember.id !== memberIdRef.current) {
+              if (
+                (prevLevel < 2 && newLevel >= 2) ||
+                (prevLevel < 3 && newLevel >= 3)
+              ) {
+                setPeerAlertMsg(
+                  `${incomingMember.nickname}님이 NOW! Lv.${newLevel}을 무시하고 있어요`,
+                );
+              }
+            }
+
             setMembers((prev) => ({
               ...prev,
-              [event.member!.id]: event.member!,
+              [incomingMember.id]: incomingMember,
             }));
           } else if (
             event.type === 'poke' &&
@@ -113,16 +139,17 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
   }, [teamCode, memberId]);
 
   useEffect(() => {
-    if (!memberId) return;
-    api.updateStatus(memberId, phase, ignoreLevel);
-  }, [phase, ignoreLevel, memberId]);
+    if (!memberId || !memberToken) return;
+    api.updateStatus(memberId, phase, ignoreLevel, memberToken);
+  }, [phase, ignoreLevel, memberId, memberToken]);
 
   const createTeam = useCallback(async (nick: string): Promise<string> => {
     const { code } = await api.createTeam();
-    const { memberId: mid, team } = await api.joinTeam(code, nick);
-    saveTeam(code, mid, nick);
+    const { memberId: mid, memberToken: tok, team } = await api.joinTeam(code, nick);
+    saveTeam(code, mid, nick, tok);
     setTeamCode(code);
     setMemberId(mid);
+    setMemberToken(tok);
     setNickname(nick);
     setMembers(team.members);
     return code;
@@ -131,10 +158,11 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
   const joinTeam = useCallback(
     async (code: string, nick: string): Promise<void> => {
       const upper = code.toUpperCase();
-      const { memberId: mid, team } = await api.joinTeam(upper, nick);
-      saveTeam(upper, mid, nick);
+      const { memberId: mid, memberToken: tok, team } = await api.joinTeam(upper, nick);
+      saveTeam(upper, mid, nick, tok);
       setTeamCode(upper);
       setMemberId(mid);
+      setMemberToken(tok);
       setNickname(nick);
       setMembers(team.members);
     },
@@ -146,19 +174,21 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
     esRef.current?.close();
     setTeamCode(null);
     setMemberId(null);
+    setMemberToken(null);
     setNickname(null);
     setMembers({});
   }, []);
 
   const poke = useCallback(
     (toId: string) => {
-      if (!memberId) return;
-      api.poke(memberId, toId).catch(() => {});
+      if (!memberId || !memberTokenRef.current) return;
+      api.poke(memberId, toId, memberTokenRef.current).catch(() => {});
     },
     [memberId],
   );
 
   const clearPoke = useCallback(() => setPokeFrom(null), []);
+  const clearPeerAlert = useCallback(() => setPeerAlertMsg(null), []);
 
   return (
     <SocialContext.Provider
@@ -168,7 +198,9 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
         nickname,
         members,
         pokeFrom,
+        peerAlertMsg,
         clearPoke,
+        clearPeerAlert,
         createTeam,
         joinTeam,
         leaveTeam,

@@ -4,7 +4,7 @@ import { SocialProvider } from "@/context/SocialContext";
 import { NavBar } from "@/components/NavBar";
 import { FocusPage } from "@/pages/FocusPage";
 import { SettingsPage } from "@/pages/SettingsPage";
-import { SocialPage, PokeToast } from "@/pages/SocialPage";
+import { SocialPage, PokeToast, PeerAlertToast } from "@/pages/SocialPage";
 
 function NotFound() {
   return (
@@ -18,6 +18,7 @@ function Router() {
   return (
     <>
       <PokeToast />
+      <PeerAlertToast />
       <Switch>
         <Route path="/" component={FocusPage} />
         <Route path="/social" component={SocialPage} />

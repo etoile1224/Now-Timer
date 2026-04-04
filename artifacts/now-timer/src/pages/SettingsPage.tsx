@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTimer } from '@/context/TimerContext';
 import { previewSound } from '@/lib/sounds';
-import { Eye, EyeOff, Volume2, Check, FlaskConical, Play } from 'lucide-react';
+import { Eye, EyeOff, Volume2, Check, FlaskConical, Play, Bell, BellOff } from 'lucide-react';
 
 interface NumberInputProps {
   label: string;
@@ -68,6 +68,67 @@ const ESCALATION_OPTIONS = [
   { value: 'normal', label: '보통', description: '30초 / 1분' },
   { value: 'fast', label: '빠름', description: '15초 / 30초' },
 ] as const;
+
+function NotificationSection() {
+  const [permission, setPermission] = useState<NotificationPermission>(
+    'Notification' in window ? Notification.permission : 'denied',
+  );
+
+  useEffect(() => {
+    if ('Notification' in window) setPermission(Notification.permission);
+  }, []);
+
+  const request = async () => {
+    if (!('Notification' in window)) return;
+    const result = await Notification.requestPermission();
+    setPermission(result);
+  };
+
+  if (!('Notification' in window)) return null;
+
+  return (
+    <section className="bg-card rounded-2xl p-4 mb-4 shadow-sm border border-border">
+      <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+        브라우저 알림
+      </h2>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          {permission === 'granted' ? (
+            <Bell size={18} className="text-primary" />
+          ) : (
+            <BellOff size={18} className="text-muted-foreground" />
+          )}
+          <div>
+            <p className="text-sm font-medium text-foreground">
+              Lv.3 알림
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {permission === 'granted'
+                ? '브라우저 탭이 백그라운드에 있어도 NOW! Lv.3 알림을 받아요'
+                : '브라우저 탭이 백그라운드일 때 Lv.3 알림 수신'}
+            </p>
+          </div>
+        </div>
+        {permission === 'granted' ? (
+          <span className="text-xs font-semibold text-primary bg-primary/10 px-2.5 py-1 rounded-lg">
+            활성화됨
+          </span>
+        ) : permission === 'denied' ? (
+          <span className="text-xs font-medium text-muted-foreground bg-muted px-2.5 py-1 rounded-lg">
+            차단됨
+          </span>
+        ) : (
+          <button
+            onClick={request}
+            className="text-xs font-semibold bg-primary text-primary-foreground px-3 py-1.5 rounded-lg active:scale-95 transition-transform"
+          >
+            허용하기
+          </button>
+        )}
+      </div>
+    </section>
+  );
+}
 
 export function SettingsPage() {
   const { settings, updateSettings, devMode, toggleDevMode } = useTimer();
@@ -323,6 +384,9 @@ export function SettingsPage() {
             ))}
           </div>
         </section>
+
+        {/* Browser Notifications */}
+        <NotificationSection />
 
         {/* About */}
         <section className="bg-card rounded-2xl p-4 mb-4 shadow-sm border border-border">
