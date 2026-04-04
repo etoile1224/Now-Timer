@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTimer } from '@/context/TimerContext';
-import { previewSound, SoundType } from '@/lib/sounds';
-import { Eye, EyeOff, Volume2, Check, FlaskConical } from 'lucide-react';
+import { previewSound } from '@/lib/sounds';
+import { Eye, EyeOff, Volume2, Check, FlaskConical, Play } from 'lucide-react';
 
 interface NumberInputProps {
   label: string;
@@ -62,12 +62,6 @@ function NumberInput({ label, value, min, max, unit = '분', onChange }: NumberI
     </div>
   );
 }
-
-const SOUND_OPTIONS: { value: SoundType; label: string; description: string }[] = [
-  { value: 'bell', label: '벨', description: '맑은 종소리' },
-  { value: 'chime', label: '차임', description: '경쾌한 차임' },
-  { value: 'soft', label: '부드러운', description: '잔잔한 알림음' },
-];
 
 const ESCALATION_OPTIONS = [
   { value: 'slow', label: '느림', description: '60초 / 2분' },
@@ -233,36 +227,27 @@ export function SettingsPage() {
           <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
             알림음
           </h2>
-          <div className="space-y-2">
-            {SOUND_OPTIONS.map(({ value, label, description }) => (
-              <button
-                key={value}
-                onClick={() => {
-                  updateSettings({ soundType: value });
-                  previewSound(value, settings.soundVolume);
-                }}
-                className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all ${
-                  settings.soundType === value
-                    ? 'border-primary bg-primary/5 text-primary'
-                    : 'border-border hover:border-muted-foreground/30'
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <Volume2 size={16} />
-                  <div className="text-left">
-                    <p className="text-sm font-semibold">{label}</p>
-                    <p className="text-xs text-muted-foreground">{description}</p>
-                  </div>
-                </div>
-                {settings.soundType === value && (
-                  <Check size={16} className="text-primary" />
-                )}
-              </button>
-            ))}
+
+          {/* Sound preview row */}
+          <div className="flex items-center justify-between p-3 rounded-xl bg-muted/60 mb-4">
+            <div className="flex items-center gap-3">
+              <Volume2 size={16} className="text-muted-foreground" />
+              <div>
+                <p className="text-sm font-semibold text-foreground">NOW! 알림음</p>
+                <p className="text-xs text-muted-foreground">Ember – Energetic</p>
+              </div>
+            </div>
+            <button
+              onClick={() => previewSound('default', settings.soundVolume)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground text-xs font-semibold rounded-lg active:scale-95 transition-transform"
+            >
+              <Play size={12} />
+              미리듣기
+            </button>
           </div>
 
           {/* Volume */}
-          <div className="mt-4 space-y-2">
+          <div className="space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-foreground">볼륨</span>
               <span className="text-sm text-muted-foreground">
