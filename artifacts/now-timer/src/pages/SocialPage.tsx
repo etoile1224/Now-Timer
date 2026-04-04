@@ -280,6 +280,7 @@ function AddTeamView({ onCancel }: { onCancel?: () => void }) {
     setError('');
     try {
       await joinTeam(code.trim(), nickname.trim());
+      onCancel?.();
     } catch (e: unknown) {
       if (e instanceof Error && e.message === 'already_joined') {
         setError('이미 참가한 팀이에요');
@@ -421,9 +422,17 @@ export function PeerAlertToast() {
 
 export function SocialPage() {
   const { memberships, activeTeamCode, setActiveTeamCode } = useSocial();
-  const [addingTeam, setAddingTeam] = useState(false);
+  const search = useSearch();
+  const urlJoinCode = new URLSearchParams(search).get('join')?.toUpperCase() ?? '';
 
   const hasTeams = memberships.length > 0;
+  const alreadyInThisTeam = urlJoinCode
+    ? memberships.some((m) => m.code === urlJoinCode)
+    : false;
+  const hasIncomingJoin = !!urlJoinCode && !alreadyInThisTeam;
+
+  const [addingTeam, setAddingTeam] = useState(hasIncomingJoin);
+
   const canAddMore = memberships.length < MAX_TEAMS;
 
   const showAddView = !hasTeams || addingTeam;
