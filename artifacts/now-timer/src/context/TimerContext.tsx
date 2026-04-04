@@ -91,16 +91,19 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
     [],
   );
 
-  const bumpIgnoreLevel = useCallback(() => {
-    ignoreLevelRef.current += 1;
-    setIgnoreLevel(ignoreLevelRef.current);
-    return ignoreLevelRef.current;
-  }, []);
-
   const resetIgnoreLevel = useCallback(() => {
     ignoreLevelRef.current = 0;
     setIgnoreLevel(0);
   }, []);
+
+  const escalationSeconds = useCallback(() => {
+    if (devModeRef.current) return DEV_SECONDS;
+    switch (settings.escalationSpeed) {
+      case 'slow': return 60;
+      case 'fast': return 15;
+      default: return 30;
+    }
+  }, [settings.escalationSpeed]);
 
   useEffect(() => {
     clearInterval_();
@@ -115,34 +118,42 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
         clearInterval_();
 
         if (phase === 'focusing') {
-          // First time NOW! fires — level 1
+          // NOW! Lv.1 — set escalation countdown for next bump
           ignoreLevelRef.current = 1;
           setIgnoreLevel(1);
           playAlert(settings.soundType, settings.soundVolume);
+          const nextEnd = Date.now() + escalationSeconds() * 1000;
+          setEndTimeMs(nextEnd);
+          setTotalSeconds(escalationSeconds());
+          setRemainingSeconds(escalationSeconds());
           setPhase('nowAlert');
 
         } else if (phase === 'breaking') {
-          // Return alert — level 1
+          // Return Lv.1
           ignoreLevelRef.current = 1;
           setIgnoreLevel(1);
           playAlert(settings.soundType, settings.soundVolume);
+          const nextEnd = Date.now() + escalationSeconds() * 1000;
+          setEndTimeMs(nextEnd);
+          setTotalSeconds(escalationSeconds());
+          setRemainingSeconds(escalationSeconds());
           setPhase('returnAlert');
 
         } else if (phase === 'nowAlert' || phase === 'returnAlert') {
-          // User ignored → bump level, re-alert
-          const lv = bumpIgnoreLevel();
-          playAlert(settings.soundType, Math.min(1, settings.soundVolume + lv * 0.1));
-          // Keep same phase — trigger re-render by resetting endTime briefly
-          // We set endTimeMs via transitionTo only when snooze is used;
-          // here we just re-fire the alert. setPhase to same value won't re-render,
-          // so we force a re-alert state update via a small timestamp push.
-          setPhase((prev) => prev); // no-op but signals intent
+          // User ignored → bump level, schedule next re-alert
+          ignoreLevelRef.current += 1;
+          setIgnoreLevel(ignoreLevelRef.current);
+          playAlert(settings.soundType, Math.min(1, settings.soundVolume + ignoreLevelRef.current * 0.1));
+          const nextEnd = Date.now() + escalationSeconds() * 1000;
+          setEndTimeMs(nextEnd);
+          setTotalSeconds(escalationSeconds());
+          setRemainingSeconds(escalationSeconds());
         }
       }
     }, 250);
 
     return clearInterval_;
-  }, [phase, endTimeMs, settings, clearInterval_, bumpIgnoreLevel]);
+  }, [phase, endTimeMs, settings, clearInterval_, escalationSeconds]);
 
   const progress =
     totalSeconds > 0 ? 1 - remainingSeconds / totalSeconds : 0;
