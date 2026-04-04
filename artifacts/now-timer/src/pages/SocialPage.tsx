@@ -12,7 +12,10 @@ import {
   Bell,
   Zap,
   QrCode,
+  Plus,
 } from 'lucide-react';
+
+const MAX_TEAMS = 5;
 
 function statusLabel(m: Member): { text: string; color: string } {
   switch (m.status) {
@@ -123,17 +126,17 @@ function TeamStats({
 }
 
 function TeamView() {
-  const { teamCode, memberId, members, poke, leaveTeam } = useSocial();
+  const { activeTeamCode, memberId, members, poke, leaveTeam } = useSocial();
   const [copied, setCopied] = useState(false);
   const [showQr, setShowQr] = useState(false);
 
-  const joinUrl = teamCode
-    ? `${window.location.origin}/social?join=${teamCode}`
+  const joinUrl = activeTeamCode
+    ? `${window.location.origin}/social?join=${activeTeamCode}`
     : '';
 
   const copyCode = () => {
-    if (!teamCode) return;
-    navigator.clipboard.writeText(teamCode).then(() => {
+    if (!activeTeamCode) return;
+    navigator.clipboard.writeText(activeTeamCode).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
@@ -151,7 +154,7 @@ function TeamView() {
         </p>
         <div className="flex items-center gap-3">
           <span className="text-2xl font-black tracking-widest text-foreground flex-1">
-            {teamCode}
+            {activeTeamCode}
           </span>
           <button
             onClick={copyCode}
@@ -173,7 +176,7 @@ function TeamView() {
             <QrCode size={16} />
           </button>
           <button
-            onClick={leaveTeam}
+            onClick={() => activeTeamCode && leaveTeam(activeTeamCode)}
             className="flex items-center gap-1 px-3 py-2 rounded-xl text-sm font-medium text-muted-foreground hover:text-destructive transition-colors"
           >
             <LogOut size={14} />
@@ -232,8 +235,8 @@ function TeamView() {
 
 type JoinView = 'landing' | 'create' | 'join';
 
-function LandingView() {
-  const { createTeam, joinTeam } = useSocial();
+function AddTeamView({ onCancel }: { onCancel?: () => void }) {
+  const { createTeam, joinTeam, memberships } = useSocial();
   const search = useSearch();
   const params = new URLSearchParams(search);
   const urlCode = params.get('join')?.toUpperCase() ?? '';
@@ -243,6 +246,8 @@ function LandingView() {
   const [code, setCode] = useState(urlCode);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const isAddMode = memberships.length > 0;
 
   async function handleCreate() {
     if (!nickname.trim()) { setError('닉네임을 입력해 주세요'); return; }
@@ -266,8 +271,12 @@ function LandingView() {
     setError('');
     try {
       await joinTeam(code.trim(), nickname.trim());
-    } catch {
-      setError('팀을 찾을 수 없어요. 코드를 다시 확인해 주세요.');
+    } catch (e: unknown) {
+      if (e instanceof Error && e.message === 'already_joined') {
+        setError('이미 참가한 팀이에요');
+      } else {
+        setError('팀을 찾을 수 없어요. 코드를 다시 확인해 주세요.');
+      }
     } finally {
       setLoading(false);
     }
@@ -276,16 +285,20 @@ function LandingView() {
   if (view === 'landing') {
     return (
       <div className="flex flex-col items-center gap-6 pt-8">
-        <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
-          <Users size={32} className="text-primary" />
-        </div>
+        {!isAddMode && (
+          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
+            <Users size={32} className="text-primary" />
+          </div>
+        )}
         <div className="text-center">
           <h2 className="text-xl font-bold text-foreground mb-1">
-            팀으로 집중하기
+            {isAddMode ? '팀 추가하기' : '팀으로 집중하기'}
           </h2>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            팀원들과 NOW! 사이클을 함께하면<br />
-            혼자보다 훨씬 잘 지킬 수 있어요
+            {isAddMode
+              ? '새 팀을 만들거나 기존 팀 코드로 참가하세요'
+              : '팀원들과 NOW! 사이클을 함께하면\n혼자보다 훨씬 잘 지킬 수 있어요'
+            }
           </p>
         </div>
         <div className="flex flex-col gap-3 w-full">
@@ -301,6 +314,14 @@ function LandingView() {
           >
             코드로 참가하기
           </button>
+          {isAddMode && onCancel && (
+            <button
+              onClick={onCancel}
+              className="text-sm text-muted-foreground text-center mt-1"
+            >
+              취소
+            </button>
+          )}
         </div>
       </div>
     );
@@ -390,30 +411,65 @@ export function PeerAlertToast() {
 }
 
 export function SocialPage() {
-  const { teamCode } = useSocial();
+  const { memberships, activeTeamCode, setActiveTeamCode } = useSocial();
+  const [addingTeam, setAddingTeam] = useState(false);
+
+  const hasTeams = memberships.length > 0;
+  const canAddMore = memberships.length < MAX_TEAMS;
+
+  const showAddView = !hasTeams || addingTeam;
 
   return (
     <div className="min-h-screen bg-background pb-24">
       <div className="max-w-md mx-auto px-5 pt-12">
-        <h1 className="text-xl font-bold text-foreground mb-6">소셜</h1>
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-xl font-bold text-foreground">소셜</h1>
+        </div>
+
+        {hasTeams && !addingTeam && (
+          <div className="flex items-center gap-2 mb-5 overflow-x-auto pb-1 scrollbar-none">
+            {memberships.map((m) => (
+              <button
+                key={m.code}
+                onClick={() => setActiveTeamCode(m.code)}
+                className={`shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+                  activeTeamCode === m.code
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/60'
+                }`}
+              >
+                {m.code}
+              </button>
+            ))}
+            {canAddMore && (
+              <button
+                onClick={() => setAddingTeam(true)}
+                className="shrink-0 w-9 h-9 rounded-xl bg-muted text-muted-foreground hover:bg-muted/60 flex items-center justify-center transition-all"
+              >
+                <Plus size={16} />
+              </button>
+            )}
+          </div>
+        )}
+
         <AnimatePresence mode="wait">
-          {teamCode ? (
+          {showAddView ? (
             <motion.div
-              key="team"
+              key="add"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+            >
+              <AddTeamView onCancel={hasTeams ? () => setAddingTeam(false) : undefined} />
+            </motion.div>
+          ) : (
+            <motion.div
+              key={activeTeamCode ?? 'team'}
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
             >
               <TeamView />
-            </motion.div>
-          ) : (
-            <motion.div
-              key="landing"
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-            >
-              <LandingView />
             </motion.div>
           )}
         </AnimatePresence>
