@@ -1,10 +1,11 @@
 import { Link, useLocation } from 'wouter';
-import { Timer, Settings, Users } from 'lucide-react';
+import { Timer, Settings, Users, BarChart2 } from 'lucide-react';
 import { useSocial } from '@/context/SocialContext';
 
 const NAV_ITEMS = [
   { href: '/', label: '몰입', icon: Timer },
   { href: '/social', label: '소셜', icon: Users },
+  { href: '/stats', label: '통계', icon: BarChart2 },
   { href: '/settings', label: '설정', icon: Settings },
 ];
 

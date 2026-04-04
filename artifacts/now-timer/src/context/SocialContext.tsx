@@ -65,6 +65,8 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
   const allMembersRef = useRef<Record<string, Record<string, Member>>>({});
   const phaseRef = useRef(phase);
   const ignoreLevelRef = useRef(ignoreLevel);
+  const prevPhaseForApiRef = useRef(phase);
+  const alertStartForApiRef = useRef<number | null>(null);
 
   useEffect(() => { membershipsRef.current = memberships; }, [memberships]);
   useEffect(() => { allMembersRef.current = allMembers; }, [allMembers]);
@@ -184,8 +186,27 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
   }, [memberships]);
 
   useEffect(() => {
+    const prevPhase = prevPhaseForApiRef.current;
+    prevPhaseForApiRef.current = phase;
+
+    const enteringAlert =
+      (phase === 'nowAlert' || phase === 'returnAlert') &&
+      (prevPhase === 'focusing' || prevPhase === 'breaking');
+    if (enteringAlert && ignoreLevel === 1) {
+      alertStartForApiRef.current = Date.now();
+    }
+
+    const wasDismissed =
+      (phase === 'breaking' && prevPhase === 'nowAlert') ||
+      (phase === 'focusing' && prevPhase === 'returnAlert');
+    let reactionMs: number | undefined;
+    if (wasDismissed && alertStartForApiRef.current !== null) {
+      reactionMs = Date.now() - alertStartForApiRef.current;
+      alertStartForApiRef.current = null;
+    }
+
     for (const m of membershipsRef.current) {
-      api.updateStatus(m.memberId, phase, ignoreLevel, m.token).catch(() => {});
+      api.updateStatus(m.memberId, phase, ignoreLevel, m.token, reactionMs).catch(() => {});
     }
   }, [phase, ignoreLevel]);
 

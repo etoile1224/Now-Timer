@@ -26,6 +26,8 @@ export interface Member {
   dismissedCount: number;
   lastSeen: string;
   todayDate: string;
+  avgReactionMs: number;
+  reactionCount: number;
 }
 
 export interface TeamData {
@@ -95,6 +97,8 @@ export function joinTeam(
     dismissedCount: 0,
     lastSeen: new Date().toISOString(),
     todayDate: todayKst(),
+    avgReactionMs: 0,
+    reactionCount: 0,
   };
 
   const token = randomBytes(16).toString('hex');
@@ -123,6 +127,7 @@ export function updateStatus(
   memberId: string,
   status: MemberStatus,
   ignoreLevel: number,
+  reactionMs?: number,
 ): { team: TeamData; member: Member } | null {
   const found = getMember(memberId);
   if (!found) return null;
@@ -150,6 +155,14 @@ export function updateStatus(
   member.lastSeen = new Date().toISOString();
   if (isEntering) member.nowCount += 1;
   if (isDismissedOnTime) member.dismissedCount += 1;
+  if (typeof reactionMs === 'number' && reactionMs > 0) {
+    member.avgReactionMs =
+      Math.round(
+        (member.avgReactionMs * member.reactionCount + reactionMs) /
+          (member.reactionCount + 1),
+      );
+    member.reactionCount += 1;
+  }
 
   broadcast(team.code, { type: 'status', member: { ...member }, prevIgnoreLevel });
   return { team, member };

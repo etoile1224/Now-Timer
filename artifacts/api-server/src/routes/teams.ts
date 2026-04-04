@@ -46,15 +46,16 @@ router.patch('/members/:id', (req, res) => {
     return;
   }
 
-  const { status, ignoreLevel } = req.body as {
+  const { status, ignoreLevel, reactionMs } = req.body as {
     status?: MemberStatus;
     ignoreLevel?: number;
+    reactionMs?: number;
   };
   if (!status) {
     res.status(400).json({ error: 'status is required' });
     return;
   }
-  const result = store.updateStatus(req.params.id, status, ignoreLevel ?? 0);
+  const result = store.updateStatus(req.params.id, status, ignoreLevel ?? 0, reactionMs);
   if (!result) {
     res.status(404).json({ error: 'Member not found' });
     return;

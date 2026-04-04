@@ -7,6 +7,8 @@ export interface Member {
   dismissedCount: number;
   lastSeen: string;
   todayDate?: string;
+  avgReactionMs: number;
+  reactionCount: number;
 }
 
 export interface TeamData {
@@ -58,8 +60,9 @@ export const api = {
     status: string,
     ignoreLevel: number,
     token: string,
+    reactionMs?: number,
   ): Promise<void> {
-    return request('PATCH', `/members/${memberId}`, { status, ignoreLevel }, token);
+    return request('PATCH', `/members/${memberId}`, { status, ignoreLevel, reactionMs }, token);
   },
 
   poke(fromId: string, toId: string, token: string): Promise<void> {
