@@ -70,6 +70,7 @@ export function playAlert(_soundType: string, volume: number, level = 1): void {
 export function previewSound(_soundType: string, volume: number, level = 1): void {
   stopAlert();
   playAlert(_soundType, volume, level);
+  setTimeout(stopAlert, 4000);
 }
 
 export function unlockAudio(): void {
