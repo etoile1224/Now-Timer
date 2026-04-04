@@ -50,15 +50,24 @@ export function getNowReactions(): NowReaction[] {
   return load<NowReaction>(K_REACTIONS);
 }
 
+function kstDateStr(d: Date): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(d);
+}
+
 export function todayStr(): string {
-  return new Date().toISOString().slice(0, 10);
+  return kstDateStr(new Date());
 }
 
 export function lastNDays(n: number): string[] {
   return Array.from({ length: n }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() - i);
-    return d.toISOString().slice(0, 10);
+    return kstDateStr(d);
   }).reverse();
 }
 
@@ -69,10 +78,10 @@ export function calcStreak(sessions: SessionEvent[]): number {
   if (!workDates.size) return 0;
   let streak = 0;
   const d = new Date();
-  if (!workDates.has(d.toISOString().slice(0, 10))) {
+  if (!workDates.has(kstDateStr(d))) {
     d.setDate(d.getDate() - 1);
   }
-  while (workDates.has(d.toISOString().slice(0, 10))) {
+  while (workDates.has(kstDateStr(d))) {
     streak++;
     d.setDate(d.getDate() - 1);
   }

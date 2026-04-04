@@ -1,25 +1,21 @@
+function kstDateStr(d: Date): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(d);
+}
+
 function todayKst(): string {
-  return new Date()
-    .toLocaleDateString('ko-KR', {
-      timeZone: 'Asia/Seoul',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    })
-    .replace(/\./g, '')
-    .replace(/\s/g, '-')
-    .replace(/-$/, '');
+  return kstDateStr(new Date());
 }
 
-function isoDate(d: Date): string {
-  return d.toISOString().slice(0, 10);
-}
-
-function lastNDays(n: number): string[] {
+function lastNDaysKst(n: number): string[] {
   return Array.from({ length: n }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() - i);
-    return isoDate(d);
+    return kstDateStr(d);
   }).reverse();
 }
 
@@ -35,10 +31,17 @@ export interface ReactionRecord {
   dismissed: boolean;
 }
 
+interface DailyCompliance {
+  date: string;
+  alerts: number;
+  dismissed: number;
+}
+
 const MAX_RECORDS = 500;
 
 const sessionsByMember = new Map<string, SessionRecord[]>();
 const reactionsByMember = new Map<string, ReactionRecord[]>();
+const complianceByMember = new Map<string, DailyCompliance[]>();
 
 function getSessions(memberId: string): SessionRecord[] {
   if (!sessionsByMember.has(memberId)) sessionsByMember.set(memberId, []);
@@ -50,10 +53,38 @@ function getReactions(memberId: string): ReactionRecord[] {
   return reactionsByMember.get(memberId)!;
 }
 
+function getDailyCompliance(memberId: string): DailyCompliance[] {
+  if (!complianceByMember.has(memberId)) complianceByMember.set(memberId, []);
+  return complianceByMember.get(memberId)!;
+}
+
 export function addSession(memberId: string, type: 'work' | 'break'): void {
   const arr = getSessions(memberId);
   arr.push({ date: todayKst(), completedAt: Date.now(), type });
   if (arr.length > MAX_RECORDS) arr.splice(0, arr.length - MAX_RECORDS);
+}
+
+export function trackAlertEntry(memberId: string): void {
+  const date = todayKst();
+  const arr = getDailyCompliance(memberId);
+  let entry = arr.find((d) => d.date === date);
+  if (!entry) {
+    entry = { date, alerts: 0, dismissed: 0 };
+    arr.push(entry);
+    if (arr.length > 90) arr.splice(0, arr.length - 90);
+  }
+  entry.alerts += 1;
+}
+
+export function trackDismissal(memberId: string): void {
+  const date = todayKst();
+  const arr = getDailyCompliance(memberId);
+  let entry = arr.find((d) => d.date === date);
+  if (!entry) {
+    entry = { date, alerts: 1, dismissed: 0 };
+    arr.push(entry);
+  }
+  entry.dismissed += 1;
 }
 
 export function addReaction(
@@ -86,34 +117,37 @@ export function getStats(
 ): StatsResponse {
   const sessions = getSessions(memberId);
   const reactions = getReactions(memberId);
+  const complianceData = getDailyCompliance(memberId);
 
   let days: string[];
   if (period === 'today') {
     days = [todayKst()];
   } else if (period === 'week') {
-    days = lastNDays(7);
+    days = lastNDaysKst(7);
   } else {
-    const uniqueDates = new Set([
+    const allDates = new Set([
       ...sessions.map((s) => s.date),
-      ...reactions.map((r) => r.date),
+      ...complianceData.map((c) => c.date),
     ]);
-    if (!uniqueDates.size) {
-      days = lastNDays(7);
+    if (!allDates.size) {
+      days = lastNDaysKst(7);
     } else {
-      const sorted = [...uniqueDates].sort();
-      const firstDate = new Date(sorted[0] + 'T00:00:00');
-      const today = new Date();
-      const diffMs = today.getTime() - firstDate.getTime();
+      const sorted = [...allDates].sort();
+      const firstDate = new Date(sorted[0] + 'T00:00:00+09:00');
+      const todayDate = new Date();
+      const diffMs = todayDate.getTime() - firstDate.getTime();
       const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-      days = lastNDays(Math.min(diffDays + 1, 90));
+      days = lastNDaysKst(Math.min(diffDays + 1, 90));
     }
   }
 
   const daySet = new Set(days);
+
   const filteredSessions = sessions.filter(
     (s) => daySet.has(s.date) && s.type === 'work',
   );
   const filteredReactions = reactions.filter((r) => daySet.has(r.date));
+  const filteredCompliance = complianceData.filter((c) => daySet.has(c.date));
 
   const totalSessions = filteredSessions.length;
 
@@ -125,41 +159,41 @@ export function getStats(
         )
       : null;
 
+  const totalAlerts = filteredCompliance.reduce((s, c) => s + c.alerts, 0);
+  const totalDismissed = filteredCompliance.reduce(
+    (s, c) => s + c.dismissed,
+    0,
+  );
   const complianceRate =
-    filteredReactions.length > 0
-      ? Math.round(
-          (filteredReactions.filter((r) => r.dismissed).length /
-            filteredReactions.length) *
-            100,
-        )
-      : null;
+    totalAlerts > 0 ? Math.round((totalDismissed / totalAlerts) * 100) : null;
 
   const workDates = new Set(
     sessions.filter((s) => s.type === 'work').map((s) => s.date),
   );
   let streak = 0;
-  const d = new Date();
-  if (!workDates.has(todayKst())) d.setDate(d.getDate() - 1);
-  while (workDates.has(isoDate(d))) {
+  const streakCheck = new Date();
+  if (!workDates.has(todayKst())) {
+    streakCheck.setDate(streakCheck.getDate() - 1);
+  }
+  while (workDates.has(kstDateStr(streakCheck))) {
     streak++;
-    d.setDate(d.getDate() - 1);
+    streakCheck.setDate(streakCheck.getDate() - 1);
   }
 
   const sessionCountByDate = new Map<string, number>();
   for (const s of filteredSessions) {
     sessionCountByDate.set(s.date, (sessionCountByDate.get(s.date) ?? 0) + 1);
   }
-  const reactionsByDate = new Map<string, ReactionRecord[]>();
-  for (const r of filteredReactions) {
-    if (!reactionsByDate.has(r.date)) reactionsByDate.set(r.date, []);
-    reactionsByDate.get(r.date)!.push(r);
+  const compByDate = new Map<string, DailyCompliance>();
+  for (const c of filteredCompliance) {
+    compByDate.set(c.date, c);
   }
 
   const daily: DailyStat[] = days.map((date) => {
-    const recs = reactionsByDate.get(date) ?? [];
+    const c = compByDate.get(date);
     const cr =
-      recs.length > 0
-        ? Math.round((recs.filter((r) => r.dismissed).length / recs.length) * 100)
+      c && c.alerts > 0
+        ? Math.round((c.dismissed / c.alerts) * 100)
         : null;
     return {
       date,

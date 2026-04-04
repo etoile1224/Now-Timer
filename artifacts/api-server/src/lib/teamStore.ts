@@ -155,8 +155,14 @@ export function updateStatus(
   member.status = status;
   member.ignoreLevel = ignoreLevel;
   member.lastSeen = new Date().toISOString();
-  if (isEntering) member.nowCount += 1;
-  if (isDismissedOnTime) member.dismissedCount += 1;
+  if (isEntering) {
+    member.nowCount += 1;
+    statsStore.trackAlertEntry(memberId);
+  }
+  if (isDismissedOnTime) {
+    member.dismissedCount += 1;
+    statsStore.trackDismissal(memberId);
+  }
   if (typeof reactionMs === 'number' && reactionMs > 0) {
     member.avgReactionMs =
       Math.round(
