@@ -16,6 +16,24 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **API codegen**: Orval (from OpenAPI spec)
 - **Build**: esbuild (CJS bundle)
 
+## Artifacts
+
+### NOW! Timer (`artifacts/now-timer`)
+- **Kind**: web (React + Vite)
+- **Port**: 24250
+- **Preview path**: `/`
+- **Purpose**: Focus timer app that hides countdown anxiety — shows only "집중 중..." during work, fires bold "NOW!" alerts at transitions
+- **Stack**: React, Vite, Tailwind CSS v4, framer-motion, wouter, lucide-react
+- **State**: `TimerContext` — phases: idle → focusing → nowAlert → breaking → returnAlert
+- **Timer engine**: `Date.now()` timestamp-based (background-tab safe)
+- **Sound**: Web Audio API synthesis (bell/chime/soft), no external files
+- **Storage**: localStorage key `now-timer-settings`
+- **Routes**: `/` (FocusPage), `/settings` (SettingsPage)
+- **Phase 1 MVP**: ✅ Done — idle/focus/break cycle, NOW! overlay, settings page
+- **Phase 2**: Escalating NOW! alerts (Lv.1→Lv.3 with red screen takeover) — planned
+- **Phase 3**: Social accountability / friend push notifications — planned
+- **Phase 4**: Session statistics and reaction speed tracking — planned
+
 ## Key Commands
 
 - `pnpm run typecheck` — full typecheck across all packages
