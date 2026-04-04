@@ -61,49 +61,49 @@
   --elevate-1: rgba(0,0,0,.03);
   --elevate-2: rgba(0,0,0,.08);
 
-  --background: 220 20% 97%;
-  --foreground: 220 15% 12%;
-  --border: 220 13% 88%;
-  --input: 220 13% 88%;
-  --ring: 213 94% 60%;
+  --background: 32 100% 91%;
+  --foreground: 20 20% 18%;
+  --border: 30 30% 82%;
+  --input: 30 40% 85%;
+  --ring: 168 50% 42%;
 
-  --card: 0 0% 100%;
-  --card-foreground: 220 15% 12%;
-  --card-border: 220 13% 90%;
+  --card: 34 80% 94%;
+  --card-foreground: 20 20% 18%;
+  --card-border: 30 30% 82%;
 
-  --popover: 0 0% 100%;
-  --popover-foreground: 220 15% 12%;
-  --popover-border: 220 13% 90%;
+  --popover: 34 80% 94%;
+  --popover-foreground: 20 20% 18%;
+  --popover-border: 30 30% 82%;
 
-  --primary: 213 94% 58%;
+  --primary: 168 50% 42%;
   --primary-foreground: 0 0% 100%;
 
-  --secondary: 220 14% 91%;
-  --secondary-foreground: 220 15% 20%;
+  --secondary: 30 40% 88%;
+  --secondary-foreground: 20 20% 25%;
 
-  --muted: 220 14% 93%;
-  --muted-foreground: 220 10% 50%;
+  --muted: 30 35% 88%;
+  --muted-foreground: 20 10% 45%;
 
-  --accent: 220 14% 91%;
-  --accent-foreground: 220 15% 12%;
+  --accent: 24 90% 58%;
+  --accent-foreground: 0 0% 100%;
 
   --destructive: 0 84% 60%;
   --destructive-foreground: 0 0% 100%;
 
-  --chart-1: 213 94% 58%;
-  --chart-2: 161 66% 44%;
+  --chart-1: 168 50% 42%;
+  --chart-2: 24 90% 58%;
   --chart-3: 30 80% 55%;
-  --chart-4: 280 65% 60%;
-  --chart-5: 340 75% 55%;
+  --chart-4: 0 70% 55%;
+  --chart-5: 45 90% 55%;
 
-  --sidebar: 220 20% 97%;
-  --sidebar-foreground: 220 15% 12%;
-  --sidebar-border: 220 13% 88%;
-  --sidebar-primary: 213 94% 58%;
+  --sidebar: 32 100% 91%;
+  --sidebar-foreground: 20 20% 18%;
+  --sidebar-border: 30 30% 82%;
+  --sidebar-primary: 168 50% 42%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 220 14% 91%;
-  --sidebar-accent-foreground: 220 15% 12%;
-  --sidebar-ring: 213 94% 60%;
+  --sidebar-accent: 30 40% 88%;
+  --sidebar-accent-foreground: 20 20% 18%;
+  --sidebar-ring: 168 50% 42%;
 
   --app-font-sans: 'Inter', 'Noto Sans KR', sans-serif;
   --app-font-serif: Georgia, serif;

@@ -10,7 +10,7 @@
     {
       "name": "api-server",
       "runtimeExecutable": "/bin/sh",
-      "runtimeArgs": ["-c", "export PATH=/Users/saebyolkim/.local/share/fnm/node-versions/v24.14.1/installation/bin:/Users/saebyolkim/.local/bin:$PATH && cd /Users/saebyolkim/Downloads/Time-Tracker-Viz/.claude/worktrees/musing-jackson/artifacts/api-server && NODE_ENV=development pnpm run dev"],
+      "runtimeArgs": ["-c", "export PATH=/Applications/Postgres.app/Contents/Versions/latest/bin:/Users/saebyolkim/.local/share/fnm/node-versions/v24.14.1/installation/bin:/Users/saebyolkim/.local/bin:$PATH && cd /Users/saebyolkim/Downloads/Time-Tracker-Viz/.claude/worktrees/musing-jackson/artifacts/api-server && DATABASE_URL=postgresql://saebyolkim@localhost:5432/nowtimer NODE_ENV=development pnpm run dev"],
       "port": 5000
     },
     {
@@ -18,6 +18,12 @@
       "runtimeExecutable": "/bin/sh",
       "runtimeArgs": ["-c", "export PATH=/Users/saebyolkim/.local/share/fnm/node-versions/v24.14.1/installation/bin:/Users/saebyolkim/.local/bin:$PATH && cd /Users/saebyolkim/Downloads/Time-Tracker-Viz/.claude/worktrees/musing-jackson/artifacts/mockup-sandbox && PORT=5173 BASE_PATH=/ pnpm run dev"],
       "port": 5173
+    },
+    {
+      "name": "now-timer-mobile",
+      "runtimeExecutable": "/bin/sh",
+      "runtimeArgs": ["-c", "export PATH=/Users/saebyolkim/.local/share/fnm/node-versions/v24.14.1/installation/bin:/Users/saebyolkim/.local/bin:$PATH && cd /Users/saebyolkim/Downloads/Time-Tracker-Viz/.claude/worktrees/musing-jackson/artifacts/now-timer-mobile && npx expo start --port 8081"],
+      "port": 8081
     }
   ]
 }
