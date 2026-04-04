@@ -45,8 +45,12 @@ export function LoginPage() {
       {/* Right form panel */}
       <div className="flex flex-col items-center justify-center flex-1 px-6 py-12">
         <div className="w-full max-w-sm">
-          <div className="text-center mb-8 lg:hidden">
-            <div className="text-4xl font-black tracking-tight text-foreground mb-1">NOW!</div>
+          <div className="flex flex-col items-center mb-8 lg:hidden">
+            <img
+              src={`${import.meta.env.BASE_URL}logo.png`}
+              alt="NOW! Timer"
+              className="h-40 w-auto mb-1"
+            />
             <div className="text-sm text-muted-foreground">팀과 함께 집중해요</div>
           </div>
 
