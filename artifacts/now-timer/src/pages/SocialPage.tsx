@@ -4,16 +4,25 @@ import { useSearch } from 'wouter';
 import { QRCodeSVG } from 'qrcode.react';
 import { useSocial } from '@/context/SocialContext';
 import type { Member } from '@/lib/api';
+import { playPokeSound } from '@/lib/sounds';
 import {
   Users,
   Copy,
   Check,
   LogOut,
-  Bell,
   Zap,
   QrCode,
   Plus,
 } from 'lucide-react';
+
+function pokeParticle(name: string): string {
+  if (!name) return '가';
+  const code = name.charCodeAt(name.length - 1);
+  if (code >= 0xac00 && code <= 0xd7a3) {
+    return (code - 0xac00) % 28 === 0 ? '가' : '이';
+  }
+  return '가';
+}
 
 const MAX_TEAMS = 5;
 
@@ -483,27 +492,71 @@ export function PokeToast() {
 
   useEffect(() => {
     if (!pokeFrom) return;
-    const t = setTimeout(clearPoke, 5000);
+
+    if ('vibrate' in navigator) {
+      navigator.vibrate([120, 60, 120, 60, 280]);
+    }
+    playPokeSound();
+
+    const t = setTimeout(clearPoke, 7000);
     return () => clearTimeout(t);
   }, [pokeFrom, clearPoke]);
 
   return (
     <AnimatePresence>
       {pokeFrom && (
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
-          className="fixed top-4 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none"
-        >
-          <div className="flex items-center gap-2 bg-orange-500 text-white px-4 py-2.5 rounded-2xl shadow-lg text-sm font-semibold pointer-events-auto">
-            <Bell size={16} />
-            <span>{pokeFrom}님이 흔들어 깨웠어요!</span>
-            <button onClick={clearPoke} className="ml-1 opacity-70 hover:opacity-100">
-              ✕
-            </button>
+        <>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 z-40 bg-black/30"
+            onClick={clearPoke}
+          />
+          <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none px-8">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.55 }}
+              animate={{
+                opacity: 1,
+                scale: 1,
+                x: [0, -18, 18, -18, 18, -9, 9, -4, 4, 0],
+              }}
+              exit={{ opacity: 0, scale: 0.75 }}
+              transition={{
+                opacity: { duration: 0.18 },
+                scale: { type: 'spring', stiffness: 380, damping: 20 },
+                x: { duration: 0.55, delay: 0.12, ease: 'easeInOut' },
+              }}
+              className="pointer-events-auto w-full max-w-xs"
+              onClick={clearPoke}
+            >
+              <div className="bg-orange-500 text-white rounded-3xl p-7 shadow-2xl text-center relative overflow-hidden">
+                <motion.div
+                  className="absolute inset-0 bg-white/15 rounded-3xl"
+                  animate={{ scale: [1, 1.5, 1], opacity: [0.4, 0, 0.4] }}
+                  transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
+                />
+                <div className="relative">
+                  <motion.div
+                    className="text-5xl mb-4 select-none"
+                    animate={{ rotate: [0, -25, 25, -25, 25, -12, 12, 0] }}
+                    transition={{ duration: 0.55, delay: 0.1 }}
+                  >
+                    👊
+                  </motion.div>
+                  <div className="text-2xl font-black leading-snug">
+                    {pokeFrom}{pokeParticle(pokeFrom)}
+                  </div>
+                  <div className="text-2xl font-black leading-snug">
+                    재촉합니다!
+                  </div>
+                  <div className="text-sm opacity-70 mt-4">탭해서 닫기</div>
+                </div>
+              </div>
+            </motion.div>
           </div>
-        </motion.div>
+        </>
       )}
     </AnimatePresence>
   );

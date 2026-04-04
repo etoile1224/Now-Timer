@@ -83,4 +83,23 @@ export function unlockAudio(): void {
   } catch {}
 }
 
+export function playPokeSound(): void {
+  try {
+    const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+    [0, 0.18, 0.36].forEach((delay) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(550, ctx.currentTime + delay);
+      osc.frequency.exponentialRampToValueAtTime(950, ctx.currentTime + delay + 0.09);
+      gain.gain.setValueAtTime(0.45, ctx.currentTime + delay);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.13);
+      osc.start(ctx.currentTime + delay);
+      osc.stop(ctx.currentTime + delay + 0.13);
+    });
+  } catch {}
+}
+
 export type SoundType = 'ember';
