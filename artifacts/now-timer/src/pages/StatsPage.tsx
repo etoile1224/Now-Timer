@@ -18,6 +18,7 @@ import {
   avgReactionMsCalc,
   complianceRateCalc,
   reactionTier,
+  todayStr,
   type SessionEvent,
   type NowReaction,
 } from '@/lib/statsStorage';
@@ -86,7 +87,7 @@ export function StatsPage() {
 
   const filteredReactions = useMemo(() => {
     if (period === 'today') {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = todayStr();
       return reactions.filter((r) => r.date === today);
     }
     if (period === 'week') {
@@ -98,7 +99,7 @@ export function StatsPage() {
 
   const filteredSessions = useMemo(() => {
     if (period === 'today') {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = todayStr();
       return workSessions.filter((s) => s.date === today);
     }
     if (period === 'week') {
@@ -133,7 +134,7 @@ export function StatsPage() {
       }));
     }
     if (period === 'today') {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = todayStr();
       const count = filteredSessions.filter((s) => s.date === today).length;
       return [{ date: today, label: '오늘', count, compRate: localCompliance }];
     }
