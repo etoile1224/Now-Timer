@@ -1,16 +1,12 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { useTimer } from '@/context/TimerContext';
 
-/* ─── Level configurations ─────────────────────────────────────────────────── */
-
 interface LevelConfig {
-  bgClass: string;         // CSS class for background
+  bgClass: string;
   badgeBg: string;
   badgeText: string;
   label: string;
-  nowText: string;         // "NOW!" / "NOW!!" / "NOW!!!!!!!"
-  nowClass: string;        // text animation class
-  subSize: string;
+  nowText: string;
   showSnooze: boolean;
 }
 
@@ -22,8 +18,6 @@ function getLv(level: number): LevelConfig {
       badgeText: 'text-yellow-900',
       label: '첫 번째 알림',
       nowText: 'NOW!',
-      nowClass: 'now-pulse',
-      subSize: 'text-xl',
       showSnooze: true,
     };
   }
@@ -34,8 +28,6 @@ function getLv(level: number): LevelConfig {
       badgeText: 'text-white',
       label: '무시하는 중...',
       nowText: 'NOW!!',
-      nowClass: 'now-shake',
-      subSize: 'text-2xl',
       showSnooze: true,
     };
   }
@@ -45,13 +37,9 @@ function getLv(level: number): LevelConfig {
     badgeText: 'text-white',
     label: '지금 당장요!!',
     nowText: 'NOW!!!!!!!',
-    nowClass: 'lv3-text-flash',
-    subSize: 'text-2xl',
     showSnooze: false,
   };
 }
-
-/* ─── Escalation countdown bar ─────────────────────────────────────────────── */
 
 function EscalationBar({
   remainingSeconds,
@@ -62,7 +50,6 @@ function EscalationBar({
   totalSeconds: number;
   level: number;
 }) {
-  const ratio = totalSeconds > 0 ? remainingSeconds / totalSeconds : 0;
   const barColor =
     level <= 1 ? 'bg-yellow-300' : level === 2 ? 'bg-orange-300' : 'bg-red-300';
 
@@ -72,7 +59,6 @@ function EscalationBar({
         <span className="text-xs text-white/50 font-medium">무시 로그</span>
         <span className="text-xs text-white/60 font-bold">{level}회</span>
       </div>
-      {/* Ignore level bars */}
       <div className="flex items-center gap-1.5">
         {Array.from({ length: Math.min(level, 12) }).map((_, i) => (
           <div
@@ -86,12 +72,11 @@ function EscalationBar({
           <span className="text-white/60 text-xs font-bold">+{level - 12}</span>
         )}
       </div>
-      {/* Escalation countdown (time until next level) */}
       {level < 3 && totalSeconds > 0 && (
         <div className="w-full h-1 bg-white/20 rounded-full overflow-hidden mt-1">
           <div
             className="h-full bg-white/60 rounded-full transition-all duration-1000"
-            style={{ width: `${ratio * 100}%` }}
+            style={{ width: `${(remainingSeconds / totalSeconds) * 100}%` }}
           />
         </div>
       )}
@@ -103,8 +88,6 @@ function EscalationBar({
     </div>
   );
 }
-
-/* ─── Main NowAlert ──────────────────────────────────────────────────────────── */
 
 interface NowAlertProps {
   type: 'work' | 'return';
@@ -129,19 +112,28 @@ export function NowAlert({ type }: NowAlertProps) {
 
   return (
     <motion.div
-      key={`alert-${level}`}
-      initial={{ opacity: 0, scale: level >= 3 ? 1.05 : 1 }}
-      animate={{ opacity: 1, scale: 1 }}
+      key={`alert-lv${level}`}
+      initial={{ opacity: 0 }}
+      animate={{
+        opacity: 1,
+        x: level === 2
+          ? [-8, 8, -8, 8, -5, 5, -3, 3, 0]
+          : 0,
+      }}
+      transition={
+        level === 2
+          ? {
+              opacity: { duration: 0.2 },
+              x: { duration: 0.55, repeat: Infinity, repeatDelay: 1.5, ease: 'easeInOut' },
+            }
+          : { duration: 0.25 }
+      }
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.25 }}
       className={`fixed inset-0 z-50 flex flex-col items-center justify-center ${lv.bgClass}`}
     >
       <div className="flex flex-col items-center gap-5 px-8 text-center w-full max-w-sm">
 
-        {/* Level badge */}
-        <div
-          className={`flex items-center gap-2 px-4 py-1.5 rounded-full border ${lv.badgeBg}`}
-        >
+        <div className={`flex items-center gap-2 px-4 py-1.5 rounded-full border ${lv.badgeBg}`}>
           <span className={`text-sm font-black tracking-widest ${lv.badgeText}`}>
             Lv.{level}
           </span>
@@ -150,26 +142,22 @@ export function NowAlert({ type }: NowAlertProps) {
           </span>
         </div>
 
-        {/* NOW! text */}
         <div
-          className={`font-black tracking-tight text-white drop-shadow-lg leading-none select-none ${lv.nowClass} ${
-            level >= 3 ? 'text-[5.5rem]' : level === 2 ? 'text-8xl' : 'text-8xl'
+          className={`font-black tracking-tight text-white drop-shadow-lg leading-none select-none ${
+            level >= 3 ? 'lv3-text-flash text-[5.5rem]' : 'now-pulse text-8xl'
           }`}
         >
           {lv.nowText}
         </div>
 
-        {/* Sub text */}
-        <p className={`font-semibold text-white/90 ${lv.subSize}`}>{subText}</p>
+        <p className="text-xl font-semibold text-white/90">{subText}</p>
 
-        {/* Escalation bar */}
         <EscalationBar
           remainingSeconds={remainingSeconds}
           totalSeconds={totalSeconds}
           level={level}
         />
 
-        {/* Buttons */}
         <div className="flex flex-col gap-3 w-full mt-1">
           <button
             onClick={dismiss}
@@ -204,8 +192,6 @@ export function NowAlert({ type }: NowAlertProps) {
     </motion.div>
   );
 }
-
-/* ─── Break progress bar ─────────────────────────────────────────────────────── */
 
 export function BreakTimerBar({
   remainingSeconds,
