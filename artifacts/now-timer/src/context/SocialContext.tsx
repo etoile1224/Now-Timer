@@ -102,12 +102,21 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
             const newLevel = incomingMember.ignoreLevel;
 
             if (incomingMember.id !== memberIdRef.current) {
-              if (
-                (prevLevel < 2 && newLevel >= 2) ||
-                (prevLevel < 3 && newLevel >= 3)
-              ) {
+              if (prevLevel < 3 && newLevel >= 3) {
+                const msg = `${incomingMember.nickname}님이 NOW! Lv.3을 무시하고 있어요`;
+                setPeerAlertMsg(msg);
+                if (
+                  'Notification' in window &&
+                  Notification.permission === 'granted'
+                ) {
+                  new Notification(msg, {
+                    body: '흔들어 깨워서 집중으로 돌아오게 해주세요!',
+                    tag: `peer-lv3-${incomingMember.id}`,
+                  });
+                }
+              } else if (prevLevel < 2 && newLevel >= 2) {
                 setPeerAlertMsg(
-                  `${incomingMember.nickname}님이 NOW! Lv.${newLevel}을 무시하고 있어요`,
+                  `${incomingMember.nickname}님이 NOW! Lv.2를 무시하고 있어요`,
                 );
               }
             }

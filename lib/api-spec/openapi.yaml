@@ -213,13 +213,16 @@ components:
           type: integer
         nowCount:
           type: integer
-          description: Total number of NOW! alerts received today
+          description: Total number of NOW! alerts received today (resets at midnight KST)
         dismissedCount:
           type: integer
-          description: Number of alerts dismissed on first notification (compliance metric)
+          description: Number of alerts dismissed on first notification today (compliance metric)
         lastSeen:
           type: string
           format: date-time
+        todayDate:
+          type: string
+          description: KST date string used for daily counter reset (YYYY. MM. DD.)
       required:
         - id
         - nickname

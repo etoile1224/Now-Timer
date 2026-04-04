@@ -6,6 +6,7 @@ export interface Member {
   nowCount: number;
   dismissedCount: number;
   lastSeen: string;
+  todayDate?: string;
 }
 
 export interface TeamData {

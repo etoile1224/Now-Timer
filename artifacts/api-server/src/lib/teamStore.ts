@@ -1,6 +1,15 @@
 import { randomBytes } from 'crypto';
 import type { Response } from 'express';
 
+function todayKst(): string {
+  return new Date().toLocaleDateString('ko-KR', {
+    timeZone: 'Asia/Seoul',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+}
+
 export type MemberStatus =
   | 'idle'
   | 'focusing'
@@ -16,6 +25,7 @@ export interface Member {
   nowCount: number;
   dismissedCount: number;
   lastSeen: string;
+  todayDate: string;
 }
 
 export interface TeamData {
@@ -84,6 +94,7 @@ export function joinTeam(
     nowCount: 0,
     dismissedCount: 0,
     lastSeen: new Date().toISOString(),
+    todayDate: todayKst(),
   };
 
   const token = randomBytes(16).toString('hex');
@@ -125,6 +136,13 @@ export function updateStatus(
     wasAlert &&
     (status === 'focusing' || status === 'breaking') &&
     member.ignoreLevel <= 1;
+
+  const today = todayKst();
+  if (member.todayDate !== today) {
+    member.nowCount = 0;
+    member.dismissedCount = 0;
+    member.todayDate = today;
+  }
 
   const prevIgnoreLevel = member.ignoreLevel;
   member.status = status;
