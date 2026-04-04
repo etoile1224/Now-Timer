@@ -7,7 +7,7 @@ import React, {
   useState,
 } from 'react';
 import { loadSettings, saveSettings, TimerSettings } from '@/lib/storage';
-import { playAlert, unlockAudio } from '@/lib/sounds';
+import { playAlert, stopAlert, unlockAudio } from '@/lib/sounds';
 
 export type TimerPhase =
   | 'idle'
@@ -121,7 +121,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
           // NOW! Lv.1 — set escalation countdown for next bump
           ignoreLevelRef.current = 1;
           setIgnoreLevel(1);
-          playAlert(settings.soundType, settings.soundVolume);
+          playAlert(settings.soundType, settings.soundVolume, 1);
           const nextEnd = Date.now() + escalationSeconds() * 1000;
           setEndTimeMs(nextEnd);
           setTotalSeconds(escalationSeconds());
@@ -132,7 +132,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
           // Return Lv.1
           ignoreLevelRef.current = 1;
           setIgnoreLevel(1);
-          playAlert(settings.soundType, settings.soundVolume);
+          playAlert(settings.soundType, settings.soundVolume, 1);
           const nextEnd = Date.now() + escalationSeconds() * 1000;
           setEndTimeMs(nextEnd);
           setTotalSeconds(escalationSeconds());
@@ -140,10 +140,11 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
           setPhase('returnAlert');
 
         } else if (phase === 'nowAlert' || phase === 'returnAlert') {
-          // User ignored → bump level, schedule next re-alert
+          // User ignored → bump level (cap display at 3 for sound, actual level tracks higher)
           ignoreLevelRef.current += 1;
           setIgnoreLevel(ignoreLevelRef.current);
-          playAlert(settings.soundType, Math.min(1, settings.soundVolume + ignoreLevelRef.current * 0.1));
+          const soundLevel = Math.min(3, ignoreLevelRef.current);
+          playAlert(settings.soundType, settings.soundVolume, soundLevel);
           const nextEnd = Date.now() + escalationSeconds() * 1000;
           setEndTimeMs(nextEnd);
           setTotalSeconds(escalationSeconds());
@@ -166,6 +167,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
 
   const stop = useCallback(() => {
     clearInterval_();
+    stopAlert();
     resetIgnoreLevel();
     setPhase('idle');
     setRemainingSeconds(settings.workDuration * 60);
@@ -173,6 +175,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
   }, [settings, clearInterval_, resetIgnoreLevel]);
 
   const dismiss = useCallback(() => {
+    stopAlert();
     resetIgnoreLevel();
     if (phase === 'nowAlert') {
       const newCount = sessionCount + 1;
@@ -196,6 +199,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
   ]);
 
   const snooze = useCallback(() => {
+    stopAlert();
     const snoozeDur = devModeRef.current ? DEV_SECONDS : 5 * 60;
     if (phase === 'nowAlert') {
       transitionTo('focusing', snoozeDur);

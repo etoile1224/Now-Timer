@@ -1,12 +1,15 @@
+export type SoundType = 'ember';
+export type EscalationSpeed = 'slow' | 'normal' | 'fast';
+
 export interface TimerSettings {
   workDuration: number;
   shortBreakDuration: number;
   longBreakDuration: number;
   longBreakInterval: number;
   hideTimer: boolean;
-  soundType: 'bell' | 'chime' | 'soft';
+  soundType: SoundType;
   soundVolume: number;
-  escalationSpeed: 'slow' | 'normal' | 'fast';
+  escalationSpeed: EscalationSpeed;
 }
 
 export const DEFAULT_SETTINGS: TimerSettings = {
@@ -15,7 +18,7 @@ export const DEFAULT_SETTINGS: TimerSettings = {
   longBreakDuration: 15,
   longBreakInterval: 4,
   hideTimer: true,
-  soundType: 'bell',
+  soundType: 'ember',
   soundVolume: 0.7,
   escalationSpeed: 'normal',
 };

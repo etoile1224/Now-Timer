@@ -142,7 +142,7 @@
 
 @keyframes now-flash {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
+  50% { opacity: 0.65; }
 }
 
 @keyframes progress-glow {
@@ -150,6 +150,32 @@
   50% { box-shadow: 0 0 8px rgba(59, 130, 246, 0.7); }
 }
 
-.now-pulse { animation: now-pulse 1.2s ease-in-out infinite; }
-.now-flash { animation: now-flash 0.6s ease-in-out infinite; }
+/* Lv.2 — horizontal shake on the NOW! text */
+@keyframes shake {
+  0%, 100% { transform: translateX(0) rotate(0deg); }
+  15%       { transform: translateX(-8px) rotate(-1.5deg); }
+  30%       { transform: translateX(8px)  rotate(1.5deg); }
+  45%       { transform: translateX(-6px) rotate(-1deg); }
+  60%       { transform: translateX(6px)  rotate(1deg); }
+  75%       { transform: translateX(-3px); }
+  90%       { transform: translateX(3px); }
+}
+
+/* Lv.3 — full-screen background flash */
+@keyframes lv3-bg-flash {
+  0%, 100% { background-color: #dc2626; } /* red-600 */
+  50%       { background-color: #7f1d1d; } /* red-900 */
+}
+
+/* Lv.3 — text flash */
+@keyframes lv3-text-flash {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.75; transform: scale(1.06); }
+}
+
+.now-pulse     { animation: now-pulse 1.2s ease-in-out infinite; }
+.now-flash     { animation: now-flash 0.6s ease-in-out infinite; }
+.now-shake     { animation: shake 0.55s ease-in-out infinite; }
+.lv3-bg-flash  { animation: lv3-bg-flash 0.45s linear infinite; }
+.lv3-text-flash { animation: lv3-text-flash 0.45s ease-in-out infinite; }
 .progress-bar-glow { animation: progress-glow 2s ease-in-out infinite; }

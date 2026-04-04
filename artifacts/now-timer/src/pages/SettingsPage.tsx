@@ -224,32 +224,51 @@ export function SettingsPage() {
 
         {/* Sound section */}
         <section className="bg-card rounded-2xl p-4 mb-4 shadow-sm border border-border">
-          <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+          <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
             알림음
           </h2>
+          <p className="text-xs text-muted-foreground mb-3">
+            레벨이 올라갈수록 같은 소리가 더 크고 자주 반복됩니다
+          </p>
 
-          {/* Sound preview row */}
-          <div className="flex items-center justify-between p-3 rounded-xl bg-muted/60 mb-4">
-            <div className="flex items-center gap-3">
-              <Volume2 size={16} className="text-muted-foreground" />
-              <div>
-                <p className="text-sm font-semibold text-foreground">NOW! 알림음</p>
-                <p className="text-xs text-muted-foreground">Ember – Energetic</p>
-              </div>
+          {/* Ember sound — single option with level previews */}
+          <div className="flex items-center gap-3 px-3 py-3 rounded-xl bg-muted/50 mb-4">
+            <Volume2 size={16} className="text-primary shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-foreground">에너지 보이스</p>
+              <p className="text-xs text-muted-foreground">Ember AI · 레벨별 강도 자동 조절</p>
             </div>
-            <button
-              onClick={() => previewSound('default', settings.soundVolume)}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-primary-foreground text-xs font-semibold rounded-lg active:scale-95 transition-transform"
-            >
-              <Play size={12} />
-              미리듣기
-            </button>
+          </div>
+
+          {/* Level previews */}
+          <div className="grid grid-cols-3 gap-2 mb-4">
+            {([1, 2, 3] as const).map((lv) => {
+              const colors = [
+                'bg-yellow-100 text-yellow-800 border-yellow-200 hover:bg-yellow-200',
+                'bg-orange-100 text-orange-800 border-orange-200 hover:bg-orange-200',
+                'bg-red-100 text-red-800 border-red-200 hover:bg-red-200',
+              ];
+              const descs = ['1회 재생', '볼륨 + 반복', '루프 재생'];
+              return (
+                <button
+                  key={lv}
+                  onClick={() => previewSound('ember', settings.soundVolume, lv)}
+                  className={`flex flex-col items-center gap-1 py-2.5 px-2 rounded-xl border text-center transition-all active:scale-95 ${colors[lv - 1]}`}
+                >
+                  <div className="flex items-center gap-1">
+                    <Play size={11} />
+                    <span className="text-xs font-bold">Lv.{lv}</span>
+                  </div>
+                  <span className="text-[10px] leading-tight">{descs[lv - 1]}</span>
+                </button>
+              );
+            })}
           </div>
 
           {/* Volume */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-foreground">볼륨</span>
+              <span className="text-sm font-medium text-foreground">기본 볼륨</span>
               <span className="text-sm text-muted-foreground">
                 {Math.round(settings.soundVolume * 100)}%
               </span>
@@ -263,6 +282,9 @@ export function SettingsPage() {
               onChange={(e) => updateSettings({ soundVolume: Number(e.target.value) })}
               className="w-full accent-primary"
             />
+            <p className="text-xs text-muted-foreground">
+              Lv.2는 +30%, Lv.3는 최대 볼륨으로 자동 조절됩니다
+            </p>
           </div>
         </section>
 
