@@ -112,6 +112,7 @@ export async function initTeams(): Promise<void> {
     console.log(`[teamStore] Loaded ${teams.size} teams, ${memberRows.length} members`);
   } catch (err) {
     console.error('[teamStore] initTeams failed:', err);
+    throw err;
   }
 }
 
