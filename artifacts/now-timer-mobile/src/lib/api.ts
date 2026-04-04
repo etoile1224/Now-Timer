@@ -1,5 +1,6 @@
 // Configure this to point to your API server
-export const API_BASE_URL = 'http://localhost:5000';
+// Use your Mac's local IP so the phone can reach it over Wi-Fi
+export const API_BASE_URL = 'http://192.168.45.156:5000';
 
 export interface Member {
   id: string;
