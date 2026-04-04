@@ -33,7 +33,11 @@ export function LoginPage() {
     <div className="min-h-screen flex bg-background">
       {/* Left branding panel — desktop only */}
       <div className="hidden lg:flex flex-col items-center justify-center flex-1 bg-foreground text-background px-12">
-        <div className="text-6xl font-black tracking-tight mb-4">NOW!</div>
+        <img
+          src={`${import.meta.env.BASE_URL}logo.png`}
+          alt="NOW! Timer"
+          className="h-32 w-auto mb-6"
+        />
         <div className="text-lg font-medium opacity-70 mb-8">팀과 함께 집중해요</div>
         <ul className="space-y-3 text-sm opacity-60 max-w-xs text-center leading-relaxed">
           <li>⏱ 포모도로 타이머로 깊은 집중</li>
