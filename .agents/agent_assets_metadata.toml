@@ -6,3 +6,9 @@ id = "x5aqy7VMxsBfccPOuNLEo"
 uri = "file://docs/wireframe-spec.md"
 type = "text"
 title = "NOW! Timer 와이어프레임 명세서 v1.0"
+
+[[outputs]]
+id = "sbZtBymW0-KnXf2I556QC"
+uri = "file://now-timer-code-review.zip"
+type = "unspecified"
+title = "NOW! Timer — 코드 리뷰용 ZIP (Phase 3 완료)"
