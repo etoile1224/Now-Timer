@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "x5aqy7VMxsBfccPOuNLEo"
+uri = "file://docs/wireframe-spec.md"
+type = "text"
+title = "NOW! Timer 와이어프레임 명세서 v1.0"
