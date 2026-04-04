@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTimer } from '@/context/TimerContext';
 import { previewSound, SoundType } from '@/lib/sounds';
-import { Eye, EyeOff, Volume2, Check } from 'lucide-react';
+import { Eye, EyeOff, Volume2, Check, FlaskConical } from 'lucide-react';
 
 interface NumberInputProps {
   label: string;
@@ -57,7 +57,7 @@ function NumberInput({ label, value, min, max, unit = '분', onChange }: NumberI
         >
           +
         </button>
-        <span className="text-sm text-muted-foreground w-4">{unit}</span>
+        <span className="text-sm text-muted-foreground w-6">{unit}</span>
       </div>
     </div>
   );
@@ -76,7 +76,7 @@ const ESCALATION_OPTIONS = [
 ] as const;
 
 export function SettingsPage() {
-  const { settings, updateSettings } = useTimer();
+  const { settings, updateSettings, devMode, toggleDevMode } = useTimer();
   const [saved, setSaved] = useState(false);
 
   const handleSave = () => {
@@ -103,10 +103,63 @@ export function SettingsPage() {
           </button>
         </div>
 
+        {/* DEV MODE */}
+        <section
+          className={`rounded-2xl p-4 mb-4 shadow-sm border transition-colors ${
+            devMode
+              ? 'bg-amber-50 border-amber-300'
+              : 'bg-card border-border'
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <FlaskConical
+                size={18}
+                className={devMode ? 'text-amber-600' : 'text-muted-foreground'}
+              />
+              <div>
+                <p className={`text-sm font-bold ${devMode ? 'text-amber-700' : 'text-foreground'}`}>
+                  Dev 모드
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {devMode
+                    ? '모든 구간 5초 · 에스컬레이션 5초'
+                    : '테스트용 초고속 타이머 (작업/휴식/에스컬레이션 모두 5초)'}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={toggleDevMode}
+              className={`relative w-12 h-6 rounded-full transition-colors ${
+                devMode ? 'bg-amber-500' : 'bg-muted'
+              }`}
+            >
+              <div
+                className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                  devMode ? 'translate-x-6' : 'translate-x-0.5'
+                }`}
+              />
+            </button>
+          </div>
+          {devMode && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {['작업 5초', '휴식 5초', '에스컬레이션 5초', '스누즈 5초'].map((tag) => (
+                <span
+                  key={tag}
+                  className="px-2 py-0.5 bg-amber-200 text-amber-800 text-xs font-semibold rounded-full"
+                >
+                  {tag}
+                </span>
+              ))}
+            </div>
+          )}
+        </section>
+
         {/* Timer section */}
-        <section className="bg-card rounded-2xl p-4 mb-4 shadow-sm border border-border">
+        <section className={`bg-card rounded-2xl p-4 mb-4 shadow-sm border border-border ${devMode ? 'opacity-50 pointer-events-none' : ''}`}>
           <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
             타이머
+            {devMode && <span className="ml-2 text-amber-600 normal-case">(Dev 모드 중 비활성)</span>}
           </h2>
           <NumberInput
             label="작업 시간"
@@ -229,7 +282,7 @@ export function SettingsPage() {
         </section>
 
         {/* Escalation section */}
-        <section className="bg-card rounded-2xl p-4 mb-4 shadow-sm border border-border">
+        <section className={`bg-card rounded-2xl p-4 mb-4 shadow-sm border border-border ${devMode ? 'opacity-50 pointer-events-none' : ''}`}>
           <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
             에스컬레이션 속도
           </h2>

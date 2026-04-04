@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { Eye, EyeOff, PlayCircle, StopCircle } from 'lucide-react';
+import { Eye, EyeOff, PlayCircle, StopCircle, FlaskConical } from 'lucide-react';
 import { NowAlert, BreakTimerBar } from '@/components/NowAlert';
 import { useTimer } from '@/context/TimerContext';
 
@@ -18,6 +18,7 @@ export function FocusPage() {
     totalSeconds,
     settings,
     isLongBreak,
+    devMode,
     start,
     stop,
     updateSettings,
@@ -30,10 +31,6 @@ export function FocusPage() {
   const isReturnAlert = phase === 'returnAlert';
 
   const showTimer = !settings.hideTimer;
-
-  const toggleTimerVisibility = () => {
-    updateSettings({ hideTimer: !settings.hideTimer });
-  };
 
   const phaseLabel = isBreaking
     ? isLongBreak
@@ -54,11 +51,19 @@ export function FocusPage() {
       <div className="w-full max-w-md flex flex-col min-h-screen">
         {/* Top bar */}
         <div className="flex items-center justify-between px-5 pt-12 pb-4">
-          <h1 className="text-xl font-bold tracking-tight text-foreground">
-            NOW! Timer
-          </h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl font-bold tracking-tight text-foreground">
+              NOW! Timer
+            </h1>
+            {devMode && (
+              <span className="flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-bold rounded-full border border-amber-300">
+                <FlaskConical size={11} />
+                DEV
+              </span>
+            )}
+          </div>
           <button
-            onClick={toggleTimerVisibility}
+            onClick={() => updateSettings({ hideTimer: !settings.hideTimer })}
             className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
             aria-label={showTimer ? '타이머 숨기기' : '타이머 보기'}
           >
@@ -78,7 +83,7 @@ export function FocusPage() {
             {phaseLabel}
           </motion.div>
 
-          {/* Timer display (only when visible AND running) */}
+          {/* Timer display */}
           <AnimatePresence>
             {showTimer && (isFocusing || isBreaking) && (
               <motion.div
@@ -93,6 +98,13 @@ export function FocusPage() {
             )}
           </AnimatePresence>
 
+          {/* Dev mode: always show timer when dev mode is on */}
+          {devMode && (isFocusing || isBreaking) && !showTimer && (
+            <div className="text-5xl font-mono font-light tabular-nums text-amber-500">
+              {formatTime(remainingSeconds)}
+            </div>
+          )}
+
           {/* Break timer bar */}
           {isBreaking && (
             <div className="w-full">
@@ -106,49 +118,54 @@ export function FocusPage() {
             </div>
           )}
 
-          {/* Progress bar (focus/idle mode) */}
+          {/* Progress bar (focus/idle) */}
           {(isFocusing || isIdle) && (
             <div className="w-full space-y-2">
               <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
                 <div
-                  className={`h-full rounded-full transition-all duration-1000 ${
+                  className={`h-full rounded-full transition-all duration-500 ${
                     isFocusing
-                      ? 'bg-primary progress-bar-glow'
+                      ? devMode
+                        ? 'bg-amber-500'
+                        : 'bg-primary progress-bar-glow'
                       : 'bg-muted-foreground/30'
                   }`}
                   style={{ width: `${progress * 100}%` }}
                 />
               </div>
-              {settings.hideTimer && (
+              {settings.hideTimer && !devMode && (
                 <p className="text-xs text-center text-muted-foreground">
                   타이머 숨김 ON — 남은 시간 표시 없음
+                </p>
+              )}
+              {devMode && (
+                <p className="text-xs text-center text-amber-600 font-medium">
+                  Dev 모드 · 5초 사이클
                 </p>
               )}
             </div>
           )}
 
-          {/* Idle state hint */}
+          {/* Idle hint */}
           {isIdle && (
             <p className="text-sm text-muted-foreground text-center max-w-xs">
-              시작 버튼을 눌러 {settings.workDuration}분 집중 세션을 시작하세요.
-              <br />
-              {settings.hideTimer
-                ? '타이머는 화면에 보이지 않아요.'
-                : '타이머가 화면에 표시돼요.'}
+              시작 버튼을 눌러{' '}
+              {devMode ? '5초' : `${settings.workDuration}분`} 집중 세션을
+              시작하세요.
             </p>
           )}
         </div>
 
-        {/* Bottom info area */}
+        {/* Bottom info + action */}
         <div className="px-6 pb-6 space-y-4">
-          {/* Session count */}
+          {/* Session dots */}
           <div className="flex items-center justify-center gap-2">
             {Array.from({ length: settings.longBreakInterval }).map((_, i) => (
               <div
                 key={i}
                 className={`h-2 w-8 rounded-full transition-colors ${
                   i < sessionCount % settings.longBreakInterval
-                    ? 'bg-primary'
+                    ? devMode ? 'bg-amber-500' : 'bg-primary'
                     : 'bg-muted'
                 }`}
               />
@@ -165,7 +182,11 @@ export function FocusPage() {
             {isIdle ? (
               <button
                 onClick={start}
-                className="flex items-center gap-2 px-8 py-4 bg-primary text-primary-foreground font-bold text-lg rounded-2xl shadow-md active:scale-95 transition-transform hover:opacity-90"
+                className={`flex items-center gap-2 px-8 py-4 font-bold text-lg rounded-2xl shadow-md active:scale-95 transition-transform hover:opacity-90 ${
+                  devMode
+                    ? 'bg-amber-500 text-white'
+                    : 'bg-primary text-primary-foreground'
+                }`}
               >
                 <PlayCircle size={24} />
                 집중 시작
