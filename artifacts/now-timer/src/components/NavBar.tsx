@@ -10,7 +10,7 @@ const NAV_ITEMS = [
 
 export function NavBar() {
   const [location] = useLocation();
-  const { pokeFrom, teamCode } = useSocial();
+  const { pokeFrom, activeTeamCode } = useSocial();
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 bg-card border-t border-border">
@@ -21,7 +21,7 @@ export function NavBar() {
           const showDot =
             href === '/social' && !!pokeFrom && !isActive;
           const showTeamDot =
-            href === '/social' && !!teamCode && !isActive && !pokeFrom;
+            href === '/social' && !!activeTeamCode && !isActive && !pokeFrom;
 
           return (
             <Link

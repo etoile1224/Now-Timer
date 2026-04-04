@@ -58,8 +58,8 @@ export const api = {
     status: string,
     ignoreLevel: number,
     token: string,
-  ): void {
-    request('PATCH', `/members/${memberId}`, { status, ignoreLevel }, token).catch(() => {});
+  ): Promise<void> {
+    return request('PATCH', `/members/${memberId}`, { status, ignoreLevel }, token);
   },
 
   poke(fromId: string, toId: string, token: string): Promise<void> {
