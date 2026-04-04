@@ -50,27 +50,25 @@ export function FocusPage() {
     <div className="min-h-screen flex flex-col items-center pb-20 bg-background">
       <div className="w-full max-w-md flex flex-col min-h-screen">
         {/* Top bar */}
-        <div className="flex items-center justify-between px-5 pt-12 pb-4">
-          <div className="flex items-center gap-2">
-            <img
-              src={`${import.meta.env.BASE_URL}logo.png`}
-              alt="NOW!! Pomodoro"
-              className="h-16 w-auto"
-            />
-            {devMode && (
-              <span className="flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-bold rounded-full border border-amber-300">
-                <FlaskConical size={11} />
-                DEV
-              </span>
-            )}
-          </div>
+        <div className="relative flex flex-col items-center px-5 pt-10 pb-2">
           <button
             onClick={() => updateSettings({ hideTimer: !settings.hideTimer })}
-            className="p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            className="absolute right-5 top-10 p-2 rounded-xl text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
             aria-label={showTimer ? '타이머 숨기기' : '타이머 보기'}
           >
             {showTimer ? <Eye size={20} /> : <EyeOff size={20} />}
           </button>
+          <img
+            src={`${import.meta.env.BASE_URL}logo.png`}
+            alt="NOW!! Pomodoro"
+            className="h-80 w-auto"
+          />
+          {devMode && (
+            <span className="flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-bold rounded-full border border-amber-300">
+              <FlaskConical size={11} />
+              DEV
+            </span>
+          )}
         </div>
 
         {/* Main focus zone */}
