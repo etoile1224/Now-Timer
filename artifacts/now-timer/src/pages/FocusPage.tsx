@@ -52,9 +52,11 @@ export function FocusPage() {
         {/* Top bar */}
         <div className="flex items-center justify-between px-5 pt-12 pb-4">
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold tracking-tight text-foreground">
-              NOW! Timer
-            </h1>
+            <img
+              src={`${import.meta.env.BASE_URL}logo.png`}
+              alt="NOW!! Pomodoro"
+              className="h-16 w-auto"
+            />
             {devMode && (
               <span className="flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-bold rounded-full border border-amber-300">
                 <FlaskConical size={11} />
