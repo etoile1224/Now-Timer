@@ -135,47 +135,56 @@
   body { @apply font-sans antialiased bg-background text-foreground; }
 }
 
+/*
+ * 광과민성 발작 안전 기준 (WCAG 2.3.1 / Epilepsy Foundation):
+ *  - 초당 3회 미만 플래시 (< 3 Hz)
+ *  - 상대 휘도 변화 ΔL < 0.10 (일반 플래시 임계값)
+ *  - 전체 화면 빨간색 플래시 금지 (적색 플래시 기준)
+ *  - prefers-reduced-motion 지원
+ */
+
+/* Lv.1/2 NOW! 텍스트 호흡 — 0.83 Hz, 스케일만 변화, 휘도 변화 없음 → 안전 */
 @keyframes now-pulse {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.08); opacity: 0.9; }
+  0%, 100% { transform: scale(1); }
+  50%       { transform: scale(1.06); }
 }
 
-@keyframes now-flash {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.65; }
-}
-
+/* 진행바 글로우 — 2 Hz, 박스 쉐도우만 → 휘도 영향 미미 → 안전 */
 @keyframes progress-glow {
   0%, 100% { box-shadow: 0 0 4px rgba(59, 130, 246, 0.4); }
-  50% { box-shadow: 0 0 8px rgba(59, 130, 246, 0.7); }
+  50%       { box-shadow: 0 0 8px rgba(59, 130, 246, 0.7); }
 }
 
-/* Lv.2 — horizontal shake on the NOW! text */
-@keyframes shake {
-  0%, 100% { transform: translateX(0) rotate(0deg); }
-  15%       { transform: translateX(-8px) rotate(-1.5deg); }
-  30%       { transform: translateX(8px)  rotate(1.5deg); }
-  45%       { transform: translateX(-6px) rotate(-1deg); }
-  60%       { transform: translateX(6px)  rotate(1deg); }
-  75%       { transform: translateX(-3px); }
-  90%       { transform: translateX(3px); }
+/*
+ * Lv.3 배경 — 전체화면 빨간색 플래시는 발작 유발 위험이 높습니다.
+ * 수정: red-600 ↔ red-700 (ΔL ≈ 0.052 < 0.10), 0.4 Hz (2.5s 주기) → 안전
+ * 기존: red-600 ↔ red-900 (ΔL ≈ 0.127), 2.22 Hz → WCAG 기준 초과
+ */
+@keyframes lv3-bg-breathe {
+  0%, 100% { background-color: #dc2626; } /* red-600, L≈0.163 */
+  50%       { background-color: #b91c1c; } /* red-700, L≈0.111, ΔL≈0.052 */
 }
 
-/* Lv.3 — full-screen background flash */
-@keyframes lv3-bg-flash {
-  0%, 100% { background-color: #dc2626; } /* red-600 */
-  50%       { background-color: #7f1d1d; } /* red-900 */
+/*
+ * Lv.3 텍스트 — 느린 스케일 변화만, opacity 변화는 최소화
+ * 0.4 Hz (2.5s 주기), opacity 변화 1 → 0.90 → 안전
+ */
+@keyframes lv3-text-breathe {
+  0%, 100% { transform: scale(1);    opacity: 1; }
+  50%       { transform: scale(1.04); opacity: 0.90; }
 }
 
-/* Lv.3 — text flash */
-@keyframes lv3-text-flash {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50%       { opacity: 0.75; transform: scale(1.06); }
-}
-
-.now-pulse     { animation: now-pulse 1.2s ease-in-out infinite; }
-.now-flash     { animation: now-flash 0.6s ease-in-out infinite; }
-.now-shake     { animation: shake 0.55s ease-in-out infinite; }
-.lv3-bg-flash  { animation: lv3-bg-flash 0.45s linear infinite; }
-.lv3-text-flash { animation: lv3-text-flash 0.45s ease-in-out infinite; }
+.now-pulse      { animation: now-pulse 1.2s ease-in-out infinite; }
+.lv3-bg-flash   { animation: lv3-bg-breathe 2.5s ease-in-out infinite; }
+.lv3-text-flash { animation: lv3-text-breathe 2.5s ease-in-out infinite; }
 .progress-bar-glow { animation: progress-glow 2s ease-in-out infinite; }
+
+/* prefers-reduced-motion: 전정 장애 및 광과민성 모두 배려 */
+@media (prefers-reduced-motion: reduce) {
+  .now-pulse,
+  .lv3-bg-flash,
+  .lv3-text-flash,
+  .progress-bar-glow {
+    animation: none;
+  }
+}

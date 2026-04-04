@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { useTimer } from '@/context/TimerContext';
 
 interface LevelConfig {
@@ -97,6 +97,7 @@ interface NowAlertProps {
 export function NowAlert({ type }: NowAlertProps) {
   const { dismiss, snooze, isLongBreak, ignoreLevel, devMode, remainingSeconds, totalSeconds } =
     useTimer();
+  const prefersReducedMotion = useReducedMotion();
 
   const level = Math.max(1, ignoreLevel);
   const lv = getLv(level);
@@ -123,18 +124,18 @@ export function NowAlert({ type }: NowAlertProps) {
   const dismissLabel = isWork ? '확인 — 쉬러 갈게요' : '확인 — 집중 시작';
   const snoozeLabel = devMode ? '5초 더...' : '5분 더...';
 
+  const shakeX = prefersReducedMotion ? 0 : [-8, 8, -8, 8, -5, 5, -3, 3, 0];
+
   return (
     <motion.div
       key={`alert-lv${level}`}
       initial={{ opacity: 0 }}
       animate={{
         opacity: 1,
-        x: level === 2
-          ? [-8, 8, -8, 8, -5, 5, -3, 3, 0]
-          : 0,
+        x: level === 2 ? shakeX : 0,
       }}
       transition={
-        level === 2
+        level === 2 && !prefersReducedMotion
           ? {
               opacity: { duration: 0.2 },
               x: { duration: 0.55, repeat: Infinity, repeatDelay: 1.5, ease: 'easeInOut' },
