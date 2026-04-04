@@ -28,11 +28,12 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **Timer engine**: `Date.now()` timestamp-based (background-tab safe)
 - **Sound**: Web Audio API synthesis (bell/chime/soft), no external files
 - **Storage**: localStorage key `now-timer-settings`
-- **Routes**: `/` (FocusPage), `/settings` (SettingsPage)
+- **Routes**: `/` (FocusPage), `/social` (SocialPage), `/stats` (StatsPage), `/settings` (SettingsPage)
+- **Stats**: `lib/statsStorage.ts` (localStorage), `hooks/useStatsTracker.ts` tracks phase transitions
 - **Phase 1 MVP**: ✅ Done — idle/focus/break cycle, NOW! overlay, settings page
-- **Phase 2**: Escalating NOW! alerts (Lv.1→Lv.3 with red screen takeover) — planned
-- **Phase 3**: Social accountability / friend push notifications — planned
-- **Phase 4**: Session statistics and reaction speed tracking — planned
+- **Phase 2**: ✅ Done — Escalating NOW! alerts (Lv.1→Lv.3 with red screen takeover)
+- **Phase 3**: ✅ Done — Social accountability, multi-team tabs, SSE realtime, poke feature
+- **Phase 4**: ✅ Done — Backend stats API, daily compliance tracking, leaderboard, streak
 
 ## Key Commands
 

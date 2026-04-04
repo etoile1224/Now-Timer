@@ -68,4 +68,18 @@ export const api = {
   poke(fromId: string, toId: string, token: string): Promise<void> {
     return request('POST', `/members/${fromId}/poke/${toId}`, undefined, token);
   },
+
+  getStats(
+    memberId: string,
+    token: string,
+    period: 'today' | 'week' | 'all',
+  ): Promise<{
+    totalSessions: number;
+    avgReactionMs: number | null;
+    complianceRate: number | null;
+    streak: number;
+    daily: { date: string; sessions: number; complianceRate: number | null }[];
+  }> {
+    return request('GET', `/stats/${memberId}?period=${period}`, undefined, token);
+  },
 };

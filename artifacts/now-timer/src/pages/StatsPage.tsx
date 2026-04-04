@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   BarChart,
   Bar,
@@ -6,8 +6,10 @@ import {
   YAxis,
   ResponsiveContainer,
   Cell,
+  Tooltip,
 } from 'recharts';
 import { useSocial } from '@/context/SocialContext';
+import { api } from '@/lib/api';
 import {
   getSessions,
   getNowReactions,
@@ -22,7 +24,15 @@ import {
 
 type Period = 'today' | 'week' | 'all';
 
-function todayLabel(date: string): string {
+interface BackendStats {
+  totalSessions: number;
+  avgReactionMs: number | null;
+  complianceRate: number | null;
+  streak: number;
+  daily: { date: string; sessions: number; complianceRate: number | null }[];
+}
+
+function dateLabel(date: string): string {
   const d = new Date(date + 'T00:00:00');
   return `${d.getMonth() + 1}/${d.getDate()}`;
 }
@@ -31,15 +41,35 @@ function msToSec(ms: number): string {
   return (ms / 1000).toFixed(1) + '초';
 }
 
-interface BarData {
-  date: string;
-  label: string;
-  count: number;
+function rankDeltaIcon(delta: number): string {
+  if (delta > 0) return '▲';
+  if (delta < 0) return '▼';
+  return '-';
 }
 
 export function StatsPage() {
   const [period, setPeriod] = useState<Period>('week');
-  const { memberships, allMembers } = useSocial();
+  const { memberships, allMembers, memberId, activeTeamCode } = useSocial();
+
+  const [backendStats, setBackendStats] = useState<BackendStats | null>(null);
+  const [backendLoading, setBackendLoading] = useState(false);
+
+  const activeMembership = useMemo(
+    () => memberships.find((m) => m.code === activeTeamCode) ?? null,
+    [memberships, activeTeamCode],
+  );
+
+  useEffect(() => {
+    if (!activeMembership) return;
+    setBackendLoading(true);
+    api
+      .getStats(activeMembership.memberId, activeMembership.token, period)
+      .then((data) => {
+        setBackendStats(data);
+        setBackendLoading(false);
+      })
+      .catch(() => setBackendLoading(false));
+  }, [activeMembership, period]);
 
   const sessions: SessionEvent[] = useMemo(() => getSessions(), []);
   const reactions: NowReaction[] = useMemo(() => getNowReactions(), []);
@@ -49,7 +79,10 @@ export function StatsPage() {
     [sessions],
   );
 
-  const streak = useMemo(() => calcStreak(sessions), [sessions]);
+  const streak = useMemo(() => {
+    if (backendStats) return backendStats.streak;
+    return calcStreak(sessions);
+  }, [backendStats, sessions]);
 
   const filteredReactions = useMemo(() => {
     if (period === 'today') {
@@ -75,11 +108,34 @@ export function StatsPage() {
     return workSessions;
   }, [workSessions, period]);
 
-  const barData: BarData[] = useMemo(() => {
+  const localAvgMs = useMemo(
+    () => avgReactionMsCalc(filteredReactions),
+    [filteredReactions],
+  );
+  const localCompliance = useMemo(
+    () => complianceRateCalc(filteredReactions),
+    [filteredReactions],
+  );
+
+  const avgMs = backendStats?.avgReactionMs ?? localAvgMs;
+  const compliance = backendStats?.complianceRate ?? localCompliance;
+  const totalWork = backendStats?.totalSessions ?? filteredSessions.length;
+  const tier = avgMs !== null ? reactionTier(avgMs) : null;
+
+  const barData = useMemo(() => {
+    const serverDaily = backendStats?.daily;
+    if (serverDaily && serverDaily.length > 0) {
+      return serverDaily.map((d) => ({
+        date: d.date,
+        label: dateLabel(d.date),
+        count: d.sessions,
+        compRate: d.complianceRate,
+      }));
+    }
     if (period === 'today') {
       const today = new Date().toISOString().slice(0, 10);
       const count = filteredSessions.filter((s) => s.date === today).length;
-      return [{ date: today, label: '오늘', count }];
+      return [{ date: today, label: '오늘', count, compRate: localCompliance }];
     }
     const days = period === 'week' ? lastNDays(7) : lastNDays(30);
     const countMap = new Map<string, number>();
@@ -90,22 +146,15 @@ export function StatsPage() {
     }
     return days.map((d) => ({
       date: d,
-      label: todayLabel(d),
+      label: dateLabel(d),
       count: countMap.get(d) ?? 0,
+      compRate: null as number | null,
     }));
-  }, [period, filteredSessions, workSessions]);
+  }, [backendStats, period, filteredSessions, workSessions, localCompliance]);
 
-  const avgMs = useMemo(
-    () => avgReactionMsCalc(filteredReactions),
-    [filteredReactions],
-  );
-  const compliance = useMemo(
-    () => complianceRateCalc(filteredReactions),
-    [filteredReactions],
-  );
-  const tier = avgMs !== null ? reactionTier(avgMs) : null;
+  const maxBar = Math.max(...barData.map((d) => d.count), 1);
 
-  const totalWork = filteredSessions.length;
+  const prevRanksRef = useRef<Map<string, number>>(new Map());
 
   const teamLeaderboards = useMemo(() => {
     return memberships.map((m) => {
@@ -124,16 +173,33 @@ export function StatsPage() {
               : null,
         }))
         .sort((a, b) => {
-          if (a.compliance === null && b.compliance === null) return 0;
-          if (a.compliance === null) return 1;
-          if (b.compliance === null) return -1;
-          if (b.compliance !== a.compliance)
-            return b.compliance - a.compliance;
-          if (a.avgReactionMs > 0 && b.avgReactionMs > 0)
+          const aHasReaction = a.avgReactionMs > 0 && a.reactionCount > 0;
+          const bHasReaction = b.avgReactionMs > 0 && b.reactionCount > 0;
+          if (aHasReaction && bHasReaction) {
             return a.avgReactionMs - b.avgReactionMs;
+          }
+          if (aHasReaction) return -1;
+          if (bHasReaction) return 1;
+          if (a.compliance !== null && b.compliance !== null) {
+            return b.compliance - a.compliance;
+          }
+          if (a.compliance !== null) return -1;
+          if (b.compliance !== null) return 1;
           return 0;
         });
-      return { code: m.code, rows };
+
+      const ranksWithDelta = rows.map((row, i) => {
+        const key = `${m.code}:${row.id}`;
+        const prev = prevRanksRef.current.get(key);
+        const delta = prev !== undefined ? prev - i : 0;
+        return { ...row, rank: i, delta };
+      });
+
+      rows.forEach((row, i) => {
+        prevRanksRef.current.set(`${m.code}:${row.id}`, i);
+      });
+
+      return { code: m.code, rows: ranksWithDelta };
     });
   }, [memberships, allMembers]);
 
@@ -143,7 +209,7 @@ export function StatsPage() {
     { key: 'all', label: '전체' },
   ];
 
-  const maxBar = Math.max(...barData.map((d) => d.count), 1);
+  const hasNoTeam = memberships.length === 0;
 
   return (
     <div className="min-h-screen pb-24 bg-background">
@@ -183,17 +249,18 @@ export function StatsPage() {
         <div className="rounded-xl border border-border bg-card p-4 space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-muted-foreground">
-              완료 세션
+              완료 세션{' '}
+              {backendLoading && (
+                <span className="text-xs text-muted-foreground/60">(동기화 중)</span>
+              )}
             </span>
             <span className="text-2xl font-bold">
               {totalWork}
-              <span className="text-base font-normal text-muted-foreground ml-1">
-                회
-              </span>
+              <span className="text-base font-normal text-muted-foreground ml-1">회</span>
             </span>
           </div>
 
-          <div className="h-40">
+          <div className="h-36">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={barData}
@@ -204,7 +271,7 @@ export function StatsPage() {
                   tick={{ fontSize: 10, fill: 'currentColor' }}
                   axisLine={false}
                   tickLine={false}
-                  interval={period === 'all' ? 4 : 0}
+                  interval={period === 'all' ? Math.floor(barData.length / 7) : 0}
                 />
                 <YAxis
                   tick={{ fontSize: 10, fill: 'currentColor' }}
@@ -212,6 +279,22 @@ export function StatsPage() {
                   tickLine={false}
                   allowDecimals={false}
                   domain={[0, Math.max(maxBar, 4)]}
+                />
+                <Tooltip
+                  cursor={{ fill: 'hsl(var(--muted))' }}
+                  content={({ active, payload, label }) => {
+                    if (!active || !payload?.length) return null;
+                    const d = payload[0]?.payload as (typeof barData)[0];
+                    return (
+                      <div className="bg-card border border-border rounded-lg px-3 py-2 text-xs shadow">
+                        <p className="font-semibold">{label}</p>
+                        <p>세션: {d.count}회</p>
+                        {d.compRate !== null && (
+                          <p>준수율: {d.compRate}%</p>
+                        )}
+                      </div>
+                    );
+                  }}
                 />
                 <Bar dataKey="count" radius={[4, 4, 0, 0]}>
                   {barData.map((entry) => (
@@ -230,10 +313,41 @@ export function StatsPage() {
           </div>
         </div>
 
+        {backendStats && backendStats.daily.some((d) => d.complianceRate !== null) && (
+          <div className="rounded-xl border border-border bg-card p-4 space-y-3">
+            <p className="text-sm font-medium text-muted-foreground">일별 NOW! 준수율</p>
+            <div className="space-y-1.5">
+              {backendStats.daily
+                .filter((d) => d.complianceRate !== null)
+                .slice(-7)
+                .map((d) => (
+                  <div key={d.date} className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground w-10 shrink-0">
+                      {dateLabel(d.date)}
+                    </span>
+                    <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${
+                          (d.complianceRate ?? 0) >= 80
+                            ? 'bg-green-500'
+                            : (d.complianceRate ?? 0) >= 50
+                              ? 'bg-yellow-500'
+                              : 'bg-red-500'
+                        }`}
+                        style={{ width: `${d.complianceRate ?? 0}%` }}
+                      />
+                    </div>
+                    <span className="text-xs font-medium w-9 text-right shrink-0">
+                      {d.complianceRate}%
+                    </span>
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
+
         <div className="rounded-xl border border-border bg-card p-4 space-y-3">
-          <p className="text-sm font-medium text-muted-foreground">
-            NOW! 반응 속도
-          </p>
+          <p className="text-sm font-medium text-muted-foreground">NOW! 반응 속도</p>
           {avgMs !== null && tier !== null ? (
             <div className="space-y-2">
               <div className="flex items-end gap-2">
@@ -243,17 +357,19 @@ export function StatsPage() {
                 </span>
               </div>
               {compliance !== null && (
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">준수율</span>
-                  <span className="font-semibold">{compliance}%</span>
-                </div>
+                <>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">전체 준수율</span>
+                    <span className="font-semibold">{compliance}%</span>
+                  </div>
+                  <div className="h-2 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-primary rounded-full transition-all"
+                      style={{ width: `${compliance}%` }}
+                    />
+                  </div>
+                </>
               )}
-              <div className="h-2 bg-muted rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-primary rounded-full transition-all"
-                  style={{ width: `${compliance ?? 0}%` }}
-                />
-              </div>
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">
@@ -263,6 +379,14 @@ export function StatsPage() {
             </p>
           )}
         </div>
+
+        {hasNoTeam && (
+          <div className="rounded-xl border border-dashed border-border bg-muted/30 p-4 text-center">
+            <p className="text-sm text-muted-foreground">
+              팀에 참가하면 팀원 리더보드가 표시됩니다.
+            </p>
+          </div>
+        )}
 
         {teamLeaderboards.map(({ code, rows }) => (
           <div
@@ -274,6 +398,9 @@ export function StatsPage() {
               <span className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">
                 {code}
               </span>
+              <span className="ml-2 text-xs text-muted-foreground/60">
+                (반응속도 순위)
+              </span>
             </p>
             {rows.length === 0 ? (
               <p className="text-sm text-muted-foreground">멤버가 없어요.</p>
@@ -281,7 +408,7 @@ export function StatsPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-xs text-muted-foreground">
-                    <th className="text-left pb-2 font-medium w-6">#</th>
+                    <th className="text-left pb-2 font-medium w-8">#</th>
                     <th className="text-left pb-2 font-medium">이름</th>
                     <th className="text-right pb-2 font-medium">준수율</th>
                     <th className="text-right pb-2 font-medium">반응속도</th>
@@ -290,21 +417,48 @@ export function StatsPage() {
                 <tbody className="divide-y divide-border">
                   {rows.map((row, i) => {
                     const t =
-                      row.avgReactionMs > 0
+                      row.avgReactionMs > 0 && row.reactionCount > 0
                         ? reactionTier(row.avgReactionMs)
                         : null;
+                    const medal =
+                      i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : null;
+                    const isMe = row.id === memberId;
                     return (
-                      <tr key={row.id} className="py-2">
-                        <td className="py-2 pr-2">
-                          {i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`}
+                      <tr
+                        key={row.id}
+                        className={isMe ? 'bg-primary/5' : ''}
+                      >
+                        <td className="py-2 pr-1">
+                          <span className="flex items-center gap-1">
+                            {medal ?? <span className="text-muted-foreground">{i + 1}</span>}
+                            {row.delta !== 0 && (
+                              <span
+                                className={`text-[10px] font-bold ${
+                                  row.delta > 0
+                                    ? 'text-green-500'
+                                    : 'text-red-500'
+                                }`}
+                              >
+                                {rankDeltaIcon(row.delta)}
+                                {Math.abs(row.delta)}
+                              </span>
+                            )}
+                          </span>
                         </td>
-                        <td className="py-2 font-medium">{row.nickname}</td>
+                        <td className="py-2 font-medium">
+                          {row.nickname}
+                          {isMe && (
+                            <span className="ml-1 text-xs text-primary">(나)</span>
+                          )}
+                        </td>
                         <td className="py-2 text-right">
-                          {row.compliance !== null
-                            ? `${row.compliance}%`
-                            : '-'}
+                          {row.compliance !== null ? `${row.compliance}%` : '-'}
                         </td>
-                        <td className={`py-2 text-right ${t?.color ?? 'text-muted-foreground'}`}>
+                        <td
+                          className={`py-2 text-right ${
+                            t?.color ?? 'text-muted-foreground'
+                          }`}
+                        >
                           {t ? (
                             <>
                               {t.grade} {msToSec(row.avgReactionMs)}

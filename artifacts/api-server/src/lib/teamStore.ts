@@ -1,5 +1,6 @@
 import { randomBytes } from 'crypto';
 import type { Response } from 'express';
+import * as statsStore from './statsStore';
 
 function todayKst(): string {
   return new Date().toLocaleDateString('ko-KR', {
@@ -150,6 +151,7 @@ export function updateStatus(
   }
 
   const prevIgnoreLevel = member.ignoreLevel;
+  const prevStatus = member.status;
   member.status = status;
   member.ignoreLevel = ignoreLevel;
   member.lastSeen = new Date().toISOString();
@@ -162,6 +164,13 @@ export function updateStatus(
           (member.reactionCount + 1),
       );
     member.reactionCount += 1;
+    statsStore.addReaction(memberId, reactionMs, isDismissedOnTime);
+  }
+
+  if (prevStatus === 'nowAlert' && status === 'breaking') {
+    statsStore.addSession(memberId, 'work');
+  } else if (prevStatus === 'returnAlert' && status === 'focusing') {
+    statsStore.addSession(memberId, 'break');
   }
 
   broadcast(team.code, { type: 'status', member: { ...member }, prevIgnoreLevel });
