@@ -53,7 +53,7 @@ router.post('/auth/login', async (req, res) => {
   res.json({ token, user: safeUser(user) });
 });
 
-router.get('/auth/me', (req, res) => {
+router.get('/auth/me', async (req, res) => {
   const header = req.headers['authorization'];
   if (!header?.startsWith('Bearer ')) {
     res.status(401).json({ error: 'unauthorized' });
@@ -64,7 +64,7 @@ router.get('/auth/me', (req, res) => {
     res.status(401).json({ error: 'invalid_token' });
     return;
   }
-  const user = userStore.getUser(payload.userId);
+  const user = await userStore.getUser(payload.userId);
   if (!user) {
     res.status(404).json({ error: 'user_not_found' });
     return;
@@ -72,7 +72,7 @@ router.get('/auth/me', (req, res) => {
   res.json({ user: safeUser(user) });
 });
 
-router.post('/auth/link-membership', (req, res) => {
+router.post('/auth/link-membership', async (req, res) => {
   const header = req.headers['authorization'];
   if (!header?.startsWith('Bearer ')) {
     res.status(401).json({ error: 'unauthorized' });
@@ -88,11 +88,11 @@ router.post('/auth/link-membership', (req, res) => {
     res.status(400).json({ error: 'missing_fields' });
     return;
   }
-  userStore.linkMembership(payload.userId, { code, memberId, nickname, token });
+  await userStore.linkMembership(payload.userId, { code, memberId, nickname, token });
   res.json({ ok: true });
 });
 
-router.delete('/auth/link-membership/:code', (req, res) => {
+router.delete('/auth/link-membership/:code', async (req, res) => {
   const header = req.headers['authorization'];
   if (!header?.startsWith('Bearer ')) {
     res.status(401).json({ error: 'unauthorized' });
@@ -103,7 +103,7 @@ router.delete('/auth/link-membership/:code', (req, res) => {
     res.status(401).json({ error: 'invalid_token' });
     return;
   }
-  userStore.unlinkMembership(payload.userId, req.params.code);
+  await userStore.unlinkMembership(payload.userId, req.params.code);
   res.json({ ok: true });
 });
 

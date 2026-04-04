@@ -160,8 +160,8 @@ export function SettingsPage() {
   const { settings, updateSettings, devMode, toggleDevMode } = useTimer();
 
   return (
-    <div className="min-h-screen bg-background pb-24">
-      <div className="max-w-md mx-auto px-5 pt-12">
+    <div className="min-h-screen bg-background pb-24 lg:pb-8">
+      <div className="max-w-md lg:max-w-3xl mx-auto px-5 pt-12">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-xl font-bold text-foreground">설정</h1>
@@ -170,6 +170,9 @@ export function SettingsPage() {
             자동 저장
           </span>
         </div>
+
+        <div className="lg:grid lg:grid-cols-2 lg:gap-6">
+        <div>
 
         {/* DEV MODE */}
         <section
@@ -398,6 +401,10 @@ export function SettingsPage() {
           </div>
         </section>
 
+        </div>
+
+        <div>
+
         {/* Browser Notifications */}
         <NotificationSection />
 
@@ -415,6 +422,9 @@ export function SettingsPage() {
             전환을 알려주는 포커스 타이머예요.
           </p>
         </section>
+
+        </div>
+        </div>
       </div>
     </div>
   );

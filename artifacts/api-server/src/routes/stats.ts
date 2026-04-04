@@ -4,7 +4,7 @@ import * as teamStore from '../lib/teamStore';
 
 const router = Router();
 
-router.get('/stats/:memberId', (req, res) => {
+router.get('/stats/:memberId', async (req, res) => {
   const token = req.headers['x-member-token'] as string | undefined;
   if (!token || !teamStore.verifyToken(req.params.memberId, token)) {
     res.status(401).json({ error: 'Invalid or missing member token' });
@@ -17,7 +17,7 @@ router.get('/stats/:memberId', (req, res) => {
     return;
   }
 
-  const stats = statsStore.getStats(req.params.memberId, period);
+  const stats = await statsStore.getStats(req.params.memberId, period);
   res.json(stats);
 });
 

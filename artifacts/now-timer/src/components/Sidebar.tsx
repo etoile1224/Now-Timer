@@ -9,18 +9,22 @@ const NAV_ITEMS = [
   { href: '/settings', label: '설정', icon: Settings },
 ];
 
-export function NavBar() {
+export function Sidebar() {
   const [location] = useLocation();
   const { pokeFrom, activeTeamCode } = useSocial();
 
   return (
-    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-card border-t border-border">
-      <div className="max-w-md mx-auto flex">
+    <aside className="hidden lg:flex fixed top-0 left-0 h-full w-56 flex-col bg-card border-r border-border z-40">
+      <div className="px-5 pt-8 pb-6">
+        <div className="text-2xl font-black tracking-tight text-foreground">NOW!</div>
+        <div className="text-xs text-muted-foreground mt-0.5">팀과 함께 집중해요</div>
+      </div>
+
+      <nav className="flex-1 px-3 space-y-1">
         {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
           const isActive =
             href === '/' ? location === '/' : location.startsWith(href);
-          const showDot =
-            href === '/social' && !!pokeFrom && !isActive;
+          const showDot = href === '/social' && !!pokeFrom && !isActive;
           const showTeamDot =
             href === '/social' && !!activeTeamCode && !isActive && !pokeFrom;
 
@@ -28,16 +32,16 @@ export function NavBar() {
             <Link
               key={href}
               href={href}
-              className={`flex-1 flex flex-col items-center justify-center gap-1 py-3 text-xs font-medium transition-colors relative ${
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors relative ${
                 isActive
-                  ? 'text-primary'
-                  : 'text-muted-foreground hover:text-foreground'
+                  ? 'bg-primary/10 text-primary'
+                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
               }`}
             >
               <div className="relative">
-                <Icon size={22} strokeWidth={isActive ? 2.2 : 1.8} />
+                <Icon size={20} strokeWidth={isActive ? 2.2 : 1.8} />
                 {showDot && (
-                  <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-orange-500 rounded-full" />
+                  <span className="absolute -top-1 -right-1 w-2 h-2 bg-orange-500 rounded-full" />
                 )}
                 {showTeamDot && (
                   <span className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full" />
@@ -47,7 +51,11 @@ export function NavBar() {
             </Link>
           );
         })}
+      </nav>
+
+      <div className="px-5 pb-6 text-xs text-muted-foreground">
+        NOW! Timer
       </div>
-    </nav>
+    </aside>
   );
 }

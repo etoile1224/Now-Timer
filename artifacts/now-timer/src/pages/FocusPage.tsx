@@ -47,8 +47,8 @@ export function FocusPage() {
     : 'text-muted-foreground';
 
   return (
-    <div className="min-h-screen flex flex-col items-center pb-20 bg-background">
-      <div className="w-full max-w-md flex flex-col min-h-screen">
+    <div className="min-h-screen flex flex-col items-center pb-20 lg:pb-8 bg-background">
+      <div className="w-full max-w-md lg:max-w-xl flex flex-col min-h-screen">
         {/* Top bar */}
         <div className="relative flex flex-col items-center px-5 pt-10 pb-2">
           <button
@@ -61,7 +61,7 @@ export function FocusPage() {
           <img
             src={`${import.meta.env.BASE_URL}logo.png`}
             alt="NOW!! Pomodoro"
-            className="h-80 w-auto"
+            className="h-72 lg:h-80 w-auto"
           />
           {devMode && (
             <span className="flex items-center gap-1 px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-bold rounded-full border border-amber-300">
@@ -78,7 +78,7 @@ export function FocusPage() {
             key={phase}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className={`text-4xl font-bold tracking-tight ${phaseColor}`}
+            className={`text-4xl lg:text-5xl font-bold tracking-tight ${phaseColor}`}
           >
             {phaseLabel}
           </motion.div>
@@ -91,7 +91,7 @@ export function FocusPage() {
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
-                className="text-7xl font-mono font-light tabular-nums text-muted-foreground"
+                className="text-7xl lg:text-8xl font-mono font-light tabular-nums text-muted-foreground"
               >
                 {formatTime(remainingSeconds)}
               </motion.div>

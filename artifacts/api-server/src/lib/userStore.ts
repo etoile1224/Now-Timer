@@ -1,7 +1,6 @@
 import { randomBytes } from 'crypto';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
-import { resolve } from 'path';
 import bcrypt from 'bcryptjs';
+import * as db from './db.js';
 
 export interface SavedMembership {
   code: string;
@@ -18,92 +17,117 @@ export interface User {
   createdAt: string;
 }
 
-const users = new Map<string, User>();
-const usernameIndex = new Map<string, string>();
+type UserRow = {
+  id: string;
+  username: string;
+  password_hash: string;
+  created_at: string;
+};
 
-const DATA_DIR = resolve(process.cwd(), 'data');
-const USERS_FILE = resolve(DATA_DIR, 'users.json');
+type MembershipRow = {
+  code: string;
+  member_id: string;
+  nickname: string;
+  token: string;
+};
 
-function ensureDataDir(): void {
-  if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
+async function getMemberships(userId: string): Promise<SavedMembership[]> {
+  const rows = await db.query<MembershipRow>(
+    'SELECT code, member_id, nickname, token FROM user_memberships WHERE user_id = $1',
+    [userId],
+  );
+  return rows.map((r) => ({
+    code: r.code,
+    memberId: r.member_id,
+    nickname: r.nickname,
+    token: r.token,
+  }));
 }
 
-function persist(): void {
-  try {
-    ensureDataDir();
-    const payload = { users: Object.fromEntries(users) };
-    writeFileSync(USERS_FILE, JSON.stringify(payload));
-  } catch (err) {
-    console.error('[userStore] persist failed:', err);
-  }
+function rowToUser(row: UserRow, memberships: SavedMembership[]): User {
+  return {
+    id: row.id,
+    username: row.username,
+    passwordHash: row.password_hash,
+    memberships,
+    createdAt: typeof row.created_at === 'string'
+      ? row.created_at
+      : new Date(row.created_at as unknown as Date).toISOString(),
+  };
 }
-
-function load(): void {
-  if (!existsSync(USERS_FILE)) return;
-  try {
-    const raw = readFileSync(USERS_FILE, 'utf-8');
-    const data = JSON.parse(raw) as { users?: Record<string, User> };
-    for (const [k, v] of Object.entries(data.users ?? {})) {
-      users.set(k, v);
-      usernameIndex.set(v.username.toLowerCase(), k);
-    }
-  } catch (err) {
-    console.error('[userStore] load failed:', err);
-  }
-}
-
-load();
 
 export async function register(
   username: string,
   password: string,
 ): Promise<User | { error: string }> {
-  const key = username.toLowerCase();
-  if (usernameIndex.has(key)) return { error: 'username_taken' };
+  const existing = await db.queryOne<UserRow>(
+    'SELECT id FROM users WHERE LOWER(username) = LOWER($1)',
+    [username],
+  );
+  if (existing) return { error: 'username_taken' };
 
   const passwordHash = await bcrypt.hash(password, 10);
-  const user: User = {
-    id: randomBytes(8).toString('hex'),
-    username,
-    passwordHash,
-    memberships: [],
-    createdAt: new Date().toISOString(),
-  };
-  users.set(user.id, user);
-  usernameIndex.set(key, user.id);
-  persist();
-  return user;
+  const id = randomBytes(8).toString('hex');
+
+  const row = await db.queryOne<UserRow>(
+    `INSERT INTO users (id, username, password_hash)
+     VALUES ($1, $2, $3)
+     RETURNING id, username, password_hash, created_at::text`,
+    [id, username, passwordHash],
+  );
+
+  if (!row) return { error: 'db_error' };
+  return rowToUser(row, []);
 }
 
 export async function login(
   username: string,
   password: string,
 ): Promise<User | null> {
-  const userId = usernameIndex.get(username.toLowerCase());
-  if (!userId) return null;
-  const user = users.get(userId);
-  if (!user) return null;
-  const ok = await bcrypt.compare(password, user.passwordHash);
-  return ok ? user : null;
+  const row = await db.queryOne<UserRow>(
+    `SELECT id, username, password_hash, created_at::text
+     FROM users WHERE LOWER(username) = LOWER($1)`,
+    [username],
+  );
+  if (!row) return null;
+  const ok = await bcrypt.compare(password, row.password_hash);
+  if (!ok) return null;
+  const memberships = await getMemberships(row.id);
+  return rowToUser(row, memberships);
 }
 
-export function getUser(userId: string): User | undefined {
-  return users.get(userId);
+export async function getUser(userId: string): Promise<User | undefined> {
+  const row = await db.queryOne<UserRow>(
+    `SELECT id, username, password_hash, created_at::text
+     FROM users WHERE id = $1`,
+    [userId],
+  );
+  if (!row) return undefined;
+  const memberships = await getMemberships(userId);
+  return rowToUser(row, memberships);
 }
 
-export function linkMembership(userId: string, m: SavedMembership): void {
-  const user = users.get(userId);
-  if (!user) return;
-  const exists = user.memberships.some((x) => x.code === m.code);
-  if (!exists) {
-    user.memberships.push(m);
-    persist();
-  }
+export async function linkMembership(
+  userId: string,
+  m: SavedMembership,
+): Promise<void> {
+  await db.run(
+    `INSERT INTO user_memberships (user_id, code, member_id, nickname, token)
+     VALUES ($1, $2, $3, $4, $5)
+     ON CONFLICT (user_id, code)
+     DO UPDATE SET member_id = EXCLUDED.member_id,
+                   nickname  = EXCLUDED.nickname,
+                   token     = EXCLUDED.token`,
+    [userId, m.code, m.memberId, m.nickname, m.token],
+  );
 }
 
-export function unlinkMembership(userId: string, code: string): void {
-  const user = users.get(userId);
-  if (!user) return;
-  user.memberships = user.memberships.filter((x) => x.code !== code);
-  persist();
+export async function unlinkMembership(
+  userId: string,
+  code: string,
+): Promise<void> {
+  await db.run(
+    'DELETE FROM user_memberships WHERE user_id = $1 AND code = $2',
+    [userId, code],
+  );
 }

@@ -3,6 +3,7 @@ import { TimerProvider } from "@/context/TimerContext";
 import { SocialProvider } from "@/context/SocialContext";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { NavBar } from "@/components/NavBar";
+import { Sidebar } from "@/components/Sidebar";
 import { FocusPage } from "@/pages/FocusPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 import { SocialPage, PokeToast, PeerAlertToast } from "@/pages/SocialPage";
@@ -29,13 +30,16 @@ function Router() {
       <StatsTracker />
       <PokeToast />
       <PeerAlertToast />
-      <Switch>
-        <Route path="/" component={FocusPage} />
-        <Route path="/social" component={SocialPage} />
-        <Route path="/stats" component={StatsPage} />
-        <Route path="/settings" component={SettingsPage} />
-        <Route component={NotFound} />
-      </Switch>
+      <Sidebar />
+      <div className="lg:pl-56">
+        <Switch>
+          <Route path="/" component={FocusPage} />
+          <Route path="/social" component={SocialPage} />
+          <Route path="/stats" component={StatsPage} />
+          <Route path="/settings" component={SettingsPage} />
+          <Route component={NotFound} />
+        </Switch>
+      </div>
       <NavBar />
     </>
   );

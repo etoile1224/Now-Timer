@@ -213,8 +213,8 @@ export function StatsPage() {
   const hasNoTeam = memberships.length === 0;
 
   return (
-    <div className="min-h-screen pb-24 bg-background">
-      <div className="max-w-md mx-auto px-4 pt-8 space-y-5">
+    <div className="min-h-screen pb-24 lg:pb-8 bg-background">
+      <div className="max-w-md lg:max-w-4xl mx-auto px-4 pt-8 space-y-5">
         <h1 className="text-2xl font-bold tracking-tight">통계</h1>
 
         <div className="flex gap-2">

@@ -4,12 +4,12 @@ import type { MemberStatus } from '../lib/teamStore';
 
 const router = Router();
 
-router.post('/teams', (_req, res) => {
-  const team = store.createTeam();
+router.post('/teams', async (_req, res) => {
+  const team = await store.createTeam();
   res.status(201).json({ code: team.code, teamId: team.id });
 });
 
-router.post('/teams/join', (req, res) => {
+router.post('/teams/join', async (req, res) => {
   const { code, nickname } = req.body as {
     code?: string;
     nickname?: string;
@@ -18,7 +18,7 @@ router.post('/teams/join', (req, res) => {
     res.status(400).json({ error: 'code and nickname are required' });
     return;
   }
-  const result = store.joinTeam(code.trim(), nickname.trim());
+  const result = await store.joinTeam(code.trim(), nickname.trim());
   if (!result) {
     res.status(404).json({ error: 'Team not found' });
     return;

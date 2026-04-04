@@ -429,8 +429,8 @@ export function SocialPage() {
   const showAddView = !hasTeams || addingTeam;
 
   return (
-    <div className="min-h-screen bg-background pb-24">
-      <div className="max-w-md mx-auto px-5 pt-12">
+    <div className="min-h-screen bg-background pb-24 lg:pb-8">
+      <div className="max-w-md lg:max-w-2xl mx-auto px-5 pt-12">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-xl font-bold text-foreground">소셜</h1>
         </div>

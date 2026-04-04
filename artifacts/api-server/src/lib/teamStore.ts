@@ -1,8 +1,7 @@
 import { randomBytes } from 'crypto';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
-import { resolve } from 'path';
 import type { Response } from 'express';
-import * as statsStore from './statsStore';
+import * as db from './db.js';
+import * as statsStore from './statsStore.js';
 
 function todayKst(): string {
   return new Intl.DateTimeFormat('en-CA', {
@@ -41,53 +40,9 @@ export interface TeamData {
 
 const teams = new Map<string, TeamData>();
 const memberTokens = new Map<string, string>();
-const sseClients = new Map<
-  string,
-  Set<{ res: Response; memberId: string }>
->();
+const sseClients = new Map<string, Set<{ res: Response; memberId: string }>>();
 
 const CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-
-const DATA_DIR = resolve(process.cwd(), 'data');
-const TEAMS_FILE = resolve(DATA_DIR, 'teams.json');
-
-function ensureDataDir(): void {
-  if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
-}
-
-function persist(): void {
-  try {
-    ensureDataDir();
-    const payload = {
-      teams: Object.fromEntries(teams),
-      memberTokens: Object.fromEntries(memberTokens),
-    };
-    writeFileSync(TEAMS_FILE, JSON.stringify(payload));
-  } catch (err) {
-    console.error('[teamStore] persist failed:', err);
-  }
-}
-
-function loadPersisted(): void {
-  if (!existsSync(TEAMS_FILE)) return;
-  try {
-    const raw = readFileSync(TEAMS_FILE, 'utf-8');
-    const data = JSON.parse(raw) as {
-      teams?: Record<string, TeamData>;
-      memberTokens?: Record<string, string>;
-    };
-    for (const [k, v] of Object.entries(data.teams ?? {})) {
-      teams.set(k, v);
-    }
-    for (const [k, v] of Object.entries(data.memberTokens ?? {})) {
-      memberTokens.set(k, v);
-    }
-  } catch (err) {
-    console.error('[teamStore] loadPersisted failed:', err);
-  }
-}
-
-loadPersisted();
 
 function genCode(): string {
   return Array.from({ length: 6 }, () =>
@@ -107,18 +62,66 @@ function clients(code: string) {
 function broadcast(code: string, payload: Record<string, unknown>): void {
   const data = `data: ${JSON.stringify(payload)}\n\n`;
   for (const { res } of clients(code)) {
-    try {
-      res.write(data);
-    } catch {}
+    try { res.write(data); } catch {}
   }
 }
 
-export function createTeam(): TeamData {
+export async function initTeams(): Promise<void> {
+  try {
+    type TeamRow = { id: string; code: string };
+    type MemberRow = {
+      id: string; team_code: string; nickname: string; status: string;
+      ignore_level: number; now_count: number; dismissed_count: number;
+      last_seen: string; today_date: string; avg_reaction_ms: number; reaction_count: number;
+    };
+    type TokenRow = { token: string; member_id: string };
+
+    const [teamRows, memberRows, tokenRows] = await Promise.all([
+      db.query<TeamRow>('SELECT id, code FROM teams'),
+      db.query<MemberRow>(
+        `SELECT id, team_code, nickname, status, ignore_level, now_count,
+                dismissed_count, last_seen, today_date, avg_reaction_ms, reaction_count
+         FROM team_members`,
+      ),
+      db.query<TokenRow>('SELECT token, member_id FROM member_tokens'),
+    ]);
+
+    for (const t of teamRows) {
+      teams.set(t.code, { id: t.id, code: t.code, members: {} });
+    }
+    for (const m of memberRows) {
+      const team = teams.get(m.team_code);
+      if (team) {
+        team.members[m.id] = {
+          id: m.id,
+          nickname: m.nickname,
+          status: m.status as MemberStatus,
+          ignoreLevel: Number(m.ignore_level),
+          nowCount: Number(m.now_count),
+          dismissedCount: Number(m.dismissed_count),
+          lastSeen: m.last_seen,
+          todayDate: m.today_date,
+          avgReactionMs: Number(m.avg_reaction_ms),
+          reactionCount: Number(m.reaction_count),
+        };
+      }
+    }
+    for (const t of tokenRows) {
+      memberTokens.set(t.member_id, t.token);
+    }
+    console.log(`[teamStore] Loaded ${teams.size} teams, ${memberRows.length} members`);
+  } catch (err) {
+    console.error('[teamStore] initTeams failed:', err);
+  }
+}
+
+export async function createTeam(): Promise<TeamData> {
   let code: string;
   do { code = genCode(); } while (teams.has(code));
-  const team: TeamData = { id: genId(), code, members: {} };
+  const id = genId();
+  const team: TeamData = { id, code, members: {} };
   teams.set(code, team);
-  persist();
+  await db.run('INSERT INTO teams (id, code) VALUES ($1, $2)', [id, code]);
   return team;
 }
 
@@ -126,10 +129,10 @@ export function getTeam(code: string): TeamData | undefined {
   return teams.get(code.toUpperCase());
 }
 
-export function joinTeam(
+export async function joinTeam(
   code: string,
   nickname: string,
-): { team: TeamData; member: Member; token: string } | null {
+): Promise<{ team: TeamData; member: Member; token: string } | null> {
   const team = teams.get(code.toUpperCase());
   if (!team) return null;
 
@@ -149,7 +152,22 @@ export function joinTeam(
   const token = randomBytes(16).toString('hex');
   team.members[member.id] = member;
   memberTokens.set(member.id, token);
-  persist();
+
+  await Promise.all([
+    db.run(
+      `INSERT INTO team_members
+         (id, team_code, nickname, status, ignore_level, now_count,
+          dismissed_count, last_seen, today_date, avg_reaction_ms, reaction_count)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+      [member.id, team.code, member.nickname, 'idle', 0, 0, 0,
+       member.lastSeen, member.todayDate, 0, 0],
+    ),
+    db.run(
+      'INSERT INTO member_tokens (token, member_id) VALUES ($1, $2)',
+      [token, member.id],
+    ),
+  ]);
+
   broadcast(team.code, { type: 'join', member });
   return { team, member, token };
 }
@@ -179,10 +197,8 @@ export function updateStatus(
   if (!found) return null;
   const { team, member } = found;
 
-  const wasAlert =
-    member.status === 'nowAlert' || member.status === 'returnAlert';
-  const isEntering =
-    (status === 'nowAlert' || status === 'returnAlert') && !wasAlert;
+  const wasAlert = member.status === 'nowAlert' || member.status === 'returnAlert';
+  const isEntering = (status === 'nowAlert' || status === 'returnAlert') && !wasAlert;
   const isDismissedOnTime =
     wasAlert &&
     (status === 'focusing' || status === 'breaking') &&
@@ -200,31 +216,44 @@ export function updateStatus(
   member.status = status;
   member.ignoreLevel = ignoreLevel;
   member.lastSeen = new Date().toISOString();
-  if (isEntering) {
-    member.nowCount += 1;
-    statsStore.trackAlertEntry(memberId);
-  }
-  if (isDismissedOnTime) {
-    member.dismissedCount += 1;
-    statsStore.trackDismissal(memberId);
-  }
+
+  if (isEntering) member.nowCount += 1;
+  if (isDismissedOnTime) member.dismissedCount += 1;
+
   if (typeof reactionMs === 'number' && reactionMs > 0) {
-    member.avgReactionMs =
-      Math.round(
-        (member.avgReactionMs * member.reactionCount + reactionMs) /
-          (member.reactionCount + 1),
-      );
+    member.avgReactionMs = Math.round(
+      (member.avgReactionMs * member.reactionCount + reactionMs) /
+        (member.reactionCount + 1),
+    );
     member.reactionCount += 1;
-    statsStore.addReaction(memberId, reactionMs, isDismissedOnTime);
   }
 
-  if (prevStatus === 'nowAlert' && status === 'breaking') {
-    statsStore.addSession(memberId, 'work');
-  } else if (prevStatus === 'returnAlert' && status === 'focusing') {
-    statsStore.addSession(memberId, 'break');
-  }
+  void (async () => {
+    try {
+      if (isEntering) await statsStore.trackAlertEntry(memberId);
+      if (isDismissedOnTime) await statsStore.trackDismissal(memberId);
+      if (typeof reactionMs === 'number' && reactionMs > 0) {
+        await statsStore.addReaction(memberId, reactionMs, isDismissedOnTime);
+      }
+      if (prevStatus === 'nowAlert' && status === 'breaking') {
+        await statsStore.addSession(memberId, 'work');
+      } else if (prevStatus === 'returnAlert' && status === 'focusing') {
+        await statsStore.addSession(memberId, 'break');
+      }
+      await db.run(
+        `UPDATE team_members
+         SET status = $1, ignore_level = $2, now_count = $3, dismissed_count = $4,
+             last_seen = $5, today_date = $6, avg_reaction_ms = $7, reaction_count = $8
+         WHERE id = $9`,
+        [member.status, member.ignoreLevel, member.nowCount, member.dismissedCount,
+         member.lastSeen, member.todayDate, member.avgReactionMs, member.reactionCount,
+         memberId],
+      );
+    } catch (err) {
+      console.error('[teamStore] updateStatus DB write failed:', err);
+    }
+  })();
 
-  persist();
   broadcast(team.code, { type: 'status', member: { ...member }, prevIgnoreLevel });
   return { team, member };
 }
