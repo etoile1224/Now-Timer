@@ -158,5 +158,7 @@ overrides:
   "@esbuild-kit/esm-loader": "npm:tsx@^4.21.0"
   esbuild: "0.27.3"
   # Security: force updated versions of vulnerable transitive dependencies
-  lodash: "4.18.0"
+  lodash: "4.18.1"
   path-to-regexp: "8.4.0"
+  picomatch: "4.0.4"
+  "micromatch>picomatch": "2.3.2"
