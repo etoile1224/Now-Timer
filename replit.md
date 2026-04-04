@@ -34,6 +34,15 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **Phase 2**: ✅ Done — Escalating NOW! alerts (Lv.1→Lv.3 with red screen takeover)
 - **Phase 3**: ✅ Done — Social accountability, multi-team tabs, SSE realtime, poke feature
 - **Phase 4**: ✅ Done — Backend stats API, daily compliance tracking, leaderboard, streak
+- **Phase 5**: ✅ Done — User accounts (username+password auth), JWT tokens, server-side membership sync across devices
+
+## Auth System (Phase 5)
+- **AuthContext** (`context/AuthContext.tsx`) — login/register/logout state, `linkMembership`/`unlinkMembership`
+- **LoginPage** (`pages/LoginPage.tsx`) — login + register form with tab toggle
+- **Auth storage**: `lib/authStorage.ts` — JWT in localStorage (`now-timer-auth-token`)
+- **Backend**: `lib/userStore.ts` (bcrypt passwords, JSON persistence), `lib/jwt.ts` (30d tokens), `routes/auth.ts`
+- **Membership sync**: On team join/create → saved to server account; on login → server memberships merged into localStorage
+- **API routes**: `POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me`, `POST /api/auth/link-membership`, `DELETE /api/auth/link-membership/:code`
 
 ## Key Commands
 

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useTimer } from '@/context/TimerContext';
+import { useAuth } from '@/context/AuthContext';
 import { previewSound } from '@/lib/sounds';
-import { Eye, EyeOff, Volume2, Check, FlaskConical, Play, Bell, BellOff } from 'lucide-react';
+import { Eye, EyeOff, Volume2, Check, FlaskConical, Play, Bell, BellOff, LogOut } from 'lucide-react';
 
 interface NumberInputProps {
   label: string;
@@ -125,6 +126,31 @@ function NotificationSection() {
             허용하기
           </button>
         )}
+      </div>
+    </section>
+  );
+}
+
+function AccountSection() {
+  const { user, logout } = useAuth();
+  if (!user) return null;
+  return (
+    <section className="bg-card rounded-2xl p-4 mb-4 shadow-sm border border-border">
+      <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+        계정
+      </h2>
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-semibold text-foreground">{user.username}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">로그인됨</p>
+        </div>
+        <button
+          onClick={logout}
+          className="flex items-center gap-1.5 text-xs font-medium text-red-500 hover:text-red-600 transition-colors py-1.5 px-3 rounded-lg hover:bg-red-50"
+        >
+          <LogOut size={13} />
+          로그아웃
+        </button>
       </div>
     </section>
   );
@@ -374,6 +400,9 @@ export function SettingsPage() {
 
         {/* Browser Notifications */}
         <NotificationSection />
+
+        {/* Account */}
+        <AccountSection />
 
         {/* About */}
         <section className="bg-card rounded-2xl p-4 mb-4 shadow-sm border border-border">

@@ -7,6 +7,7 @@ import React, {
   useState,
 } from 'react';
 import { useTimer } from '@/context/TimerContext';
+import { useAuth } from '@/context/AuthContext';
 import { api, type Member } from '@/lib/api';
 import {
   type Membership,
@@ -45,16 +46,27 @@ export function useSocial(): SocialState {
 
 export function SocialProvider({ children }: { children: React.ReactNode }) {
   const { phase, ignoreLevel } = useTimer();
+  const { user, linkMembership, unlinkMembership } = useAuth();
 
-  const [memberships, setMemberships] = useState<Membership[]>(() => getMemberships());
-  const [activeTeamCode, setActiveTeamCodeState] = useState<string | null>(
-    () => {
-      const saved = getMemberships();
-      const active = getActiveCode();
-      if (!saved.length) return null;
-      return saved.find((m) => m.code === active)?.code ?? saved[0].code;
-    },
-  );
+  const [memberships, setMemberships] = useState<Membership[]>(() => {
+    const local = getMemberships();
+    if (!user) return local;
+    const merged = [...local];
+    for (const sm of user.memberships) {
+      if (!merged.some((m) => m.code === sm.code)) {
+        addMembership(sm);
+        merged.push(sm);
+      }
+    }
+    return getMemberships();
+  });
+
+  const [activeTeamCode, setActiveTeamCodeState] = useState<string | null>(() => {
+    const saved = getMemberships();
+    const active = getActiveCode();
+    if (!saved.length) return null;
+    return saved.find((m) => m.code === active)?.code ?? saved[0].code;
+  });
 
   const [allMembers, setAllMembers] = useState<Record<string, Record<string, Member>>>({});
   const [pokeFrom, setPokeFrom] = useState<string | null>(null);
@@ -219,8 +231,9 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
     setAllMembers((prev) => ({ ...prev, [code]: team.members }));
     setActiveCode(code);
     setActiveTeamCodeState(code);
+    linkMembership(m).catch(() => {});
     return code;
-  }, []);
+  }, [linkMembership]);
 
   const joinTeam = useCallback(async (code: string, nick: string): Promise<void> => {
     const upper = code.toUpperCase();
@@ -234,7 +247,8 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
     setAllMembers((prev) => ({ ...prev, [upper]: team.members }));
     setActiveCode(upper);
     setActiveTeamCodeState(upper);
-  }, []);
+    linkMembership(m).catch(() => {});
+  }, [linkMembership]);
 
   const leaveTeam = useCallback((code: string) => {
     esMap.current.get(code)?.close();
@@ -249,7 +263,8 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
     });
     const newActive = getActiveCode() || remaining[0]?.code || null;
     setActiveTeamCodeState(newActive);
-  }, []);
+    unlinkMembership(code).catch(() => {});
+  }, [unlinkMembership]);
 
   const poke = useCallback(
     (toId: string) => {
