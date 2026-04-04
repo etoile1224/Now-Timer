@@ -405,7 +405,7 @@ export function PeerAlertToast() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: 20 }}
-          className="fixed bottom-24 left-0 right-0 z-50 flex justify-center px-4 pointer-events-none"
+          className="fixed bottom-24 left-0 right-0 z-[60] flex justify-center px-4 pointer-events-none"
         >
           <div className="flex items-center gap-2 bg-orange-600 text-white px-4 py-2.5 rounded-2xl shadow-lg text-sm font-semibold pointer-events-auto max-w-xs">
             <Zap size={15} className="shrink-0" />
@@ -520,10 +520,10 @@ export function PokeToast() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-40 bg-black/30"
+            className="fixed inset-0 z-[60] bg-black/30"
             onClick={clearPoke}
           />
-          <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none px-8">
+          <div className="fixed inset-0 z-[60] flex items-center justify-center pointer-events-none px-8">
             <motion.div
               initial={{ opacity: 0, scale: 0.55 }}
               animate={{
