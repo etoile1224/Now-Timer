@@ -1,8 +1,10 @@
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { TimerProvider } from "@/context/TimerContext";
+import { SocialProvider } from "@/context/SocialContext";
 import { NavBar } from "@/components/NavBar";
 import { FocusPage } from "@/pages/FocusPage";
 import { SettingsPage } from "@/pages/SettingsPage";
+import { SocialPage, PokeToast } from "@/pages/SocialPage";
 
 function NotFound() {
   return (
@@ -15,8 +17,10 @@ function NotFound() {
 function Router() {
   return (
     <>
+      <PokeToast />
       <Switch>
         <Route path="/" component={FocusPage} />
+        <Route path="/social" component={SocialPage} />
         <Route path="/settings" component={SettingsPage} />
         <Route component={NotFound} />
       </Switch>
@@ -29,7 +33,9 @@ function App() {
   return (
     <TimerProvider>
       <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-        <Router />
+        <SocialProvider>
+          <Router />
+        </SocialProvider>
       </WouterRouter>
     </TimerProvider>
   );
