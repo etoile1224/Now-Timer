@@ -188,10 +188,20 @@ function VoicePokeSection() {
   const [audioBase64, setAudioBase64] = useState<string | null>(null);
 
   useEffect(() => {
-    AsyncStorage.getItem(VOICE_KEY).then((val) => {
-      if (val) setAudioBase64(val);
+    AsyncStorage.getItem(VOICE_KEY).then(async (val) => {
+      if (val) {
+        setAudioBase64(val);
+      } else if (authToken) {
+        try {
+          const { audio } = await api.getUserVoice(authToken);
+          if (audio) {
+            setAudioBase64(audio);
+            await AsyncStorage.setItem(VOICE_KEY, audio);
+          }
+        } catch {}
+      }
     });
-  }, []);
+  }, [authToken]);
 
   const handleSave = useCallback(async (base64: string) => {
     setAudioBase64(base64);

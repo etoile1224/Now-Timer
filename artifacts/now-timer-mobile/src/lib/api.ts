@@ -107,6 +107,9 @@ export const api = {
   deleteUserVoice(authToken: string): Promise<void> {
     return authRequest('DELETE', '/auth/voice', authToken);
   },
+  getUserVoice(authToken: string): Promise<{ audio: string }> {
+    return authRequest('GET', '/auth/voice', authToken);
+  },
   registerPushToken(memberId: string, pushToken: string, token: string): Promise<void> {
     return request('POST', `/members/${memberId}/push-token`, { pushToken }, token);
   },
