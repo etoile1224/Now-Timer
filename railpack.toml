@@ -1,5 +1,6 @@
 [build]
 packageManager = "pnpm"
+buildCommand = "pnpm run -r --if-present build"
 
 [start]
-command = "node --enable-source-maps artifacts/api-server/dist/index.mjs"
+command = "cd artifacts/api-server && node --enable-source-maps dist/index.mjs"
