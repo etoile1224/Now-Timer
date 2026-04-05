@@ -1,7 +1,7 @@
 {
   "$schema": "https://railway.com/railway.schema.json",
   "deploy": {
-    "startCommand": "cd artifacts/api-server && node --enable-source-maps dist/index.mjs",
+    "startCommand": "node artifacts/api-server/db/migrate.mjs && node --enable-source-maps artifacts/api-server/dist/index.mjs",
     "healthcheckPath": "/api/healthz",
     "restartPolicyType": "ON_FAILURE"
   }
