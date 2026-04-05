@@ -19,6 +19,7 @@ import {
   setActiveCode,
   addMembership,
   removeMembership,
+  updateMembershipName,
 } from '@/lib/teamStorage';
 
 interface SocialState {
@@ -35,10 +36,11 @@ interface SocialState {
   peerAlertMsg: string | null;
   clearPoke: () => void;
   clearPeerAlert: () => void;
-  createTeam: (nickname: string) => Promise<string>;
+  createTeam: (nickname: string, teamName?: string) => Promise<string>;
   joinTeam: (code: string, nickname: string) => Promise<void>;
   leaveTeam: (code: string) => void;
   poke: (toId: string) => void;
+  renameTeam: (code: string, name: string) => Promise<void>;
 }
 
 const SocialContext = createContext<SocialState | null>(null);
@@ -112,7 +114,7 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
         try {
           const event = JSON.parse(evt.data) as {
             type: string;
-            team?: { members: Record<string, Member> };
+            team?: { members: Record<string, Member>; name?: string };
             member?: Member;
             memberId?: string;
             avatarData?: string;
@@ -120,10 +122,19 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
             fromNickname?: string;
             fromMemberId?: string;
             hasVoice?: boolean;
+            name?: string;
           };
 
           if (event.type === 'init' && event.team) {
             setAllMembers((prev) => ({ ...prev, [m.code]: { ...event.team!.members } }));
+            // Sync team name from server
+            if (event.team.name) {
+              updateMembershipName(m.code, event.team.name);
+              setMemberships(getMemberships());
+            }
+          } else if (event.type === 'teamRename' && event.name !== undefined) {
+            updateMembershipName(m.code, event.name);
+            setMemberships(getMemberships());
           } else if ((event.type === 'status' || event.type === 'join') && event.member) {
             const incoming = event.member;
             const prevLevel = allMembersRef.current[m.code]?.[incoming.id]?.ignoreLevel ?? 0;
@@ -235,10 +246,10 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
     }
   }, [phase, ignoreLevel]);
 
-  const createTeam = useCallback(async (nick: string): Promise<string> => {
-    const { code } = await api.createTeam();
+  const createTeam = useCallback(async (nick: string, teamName?: string): Promise<string> => {
+    const { code } = await api.createTeam(teamName);
     const { memberId: mid, memberToken: tok, team } = await api.joinTeam(code, nick);
-    const m: Membership = { code, memberId: mid, nickname: nick, token: tok };
+    const m: Membership = { code, memberId: mid, nickname: nick, token: tok, teamName: teamName || '' };
     addMembership(m);
     setMemberships(getMemberships());
     setAllMembers((prev) => ({ ...prev, [code]: team.members }));
@@ -282,6 +293,14 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
     unlinkMembership(code).catch(() => {});
   }, [unlinkMembership]);
 
+  const renameTeam = useCallback(async (code: string, name: string): Promise<void> => {
+    const m = membershipsRef.current.find((x) => x.code === code);
+    if (!m) return;
+    await api.renameTeam(code, name, m.token);
+    updateMembershipName(code, name);
+    setMemberships(getMemberships());
+  }, []);
+
   const poke = useCallback(
     (toId: string) => {
       const m = membershipsRef.current.find((x) => x.code === activeTeamCode);
@@ -321,6 +340,7 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
         joinTeam,
         leaveTeam,
         poke,
+        renameTeam,
       }}
     >
       {children}

@@ -5,6 +5,7 @@ export interface Membership {
   memberId: string;
   nickname: string;
   token: string;
+  teamName?: string;
 }
 
 const K_MEMBERSHIPS = 'now-timer-memberships';
@@ -42,5 +43,14 @@ export function removeMembership(code: string): void {
   setItem(K_MEMBERSHIPS, JSON.stringify(list));
   if (getItem(K_ACTIVE) === code) {
     setItem(K_ACTIVE, list[0]?.code ?? '');
+  }
+}
+
+export function updateMembershipName(code: string, teamName: string): void {
+  const list = getMemberships();
+  const m = list.find((x) => x.code === code);
+  if (m) {
+    m.teamName = teamName;
+    setItem(K_MEMBERSHIPS, JSON.stringify(list));
   }
 }

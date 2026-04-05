@@ -5,11 +5,12 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  ActivityIndicator,
   Platform,
+  Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSocial } from '@/context/SocialContext';
+import { useTimer } from '@/context/TimerContext';
 import { api } from '@/lib/api';
 import {
   getSessions,
@@ -20,12 +21,14 @@ import {
   complianceRateCalc,
   reactionTier,
   todayStr,
+  totalWorkMinutes,
+  clearAllStats,
   type SessionEvent,
   type NowReaction,
 } from '@/lib/statsStorage';
 import { colors } from '@/lib/colors';
 
-type Period = 'today' | 'week' | 'all';
+type Period = 'today' | 'week' | 'month';
 
 interface BackendStats {
   totalSessions: number;
@@ -41,92 +44,103 @@ function dateLabel(date: string): string {
 }
 
 function msToSec(ms: number): string {
-  return (ms / 1000).toFixed(1) + '\uCD08';
+  return (ms / 1000).toFixed(1) + '초';
+}
+
+function formatWorkTime(minutes: number): { value: string; unit: string } {
+  if (minutes < 60) {
+    return { value: Math.round(minutes).toString(), unit: '분' };
+  }
+  const h = Math.floor(minutes / 60);
+  const m = Math.round(minutes % 60);
+  if (m === 0) return { value: h.toString(), unit: '시간' };
+  return { value: `${h}시간 ${m}`, unit: '분' };
 }
 
 function rankDeltaIcon(delta: number): string {
-  if (delta > 0) return '\u25B2';
-  if (delta < 0) return '\u25BC';
+  if (delta > 0) return '▲';
+  if (delta < 0) return '▼';
   return '-';
 }
 
-function SimpleBarChart({
+/* ── Tomato images for daily display ── */
+
+const TOMATO_IMAGES = [
+  require('@/../assets/images/tomato1.png'),
+  require('@/../assets/images/tomato2.png'),
+  require('@/../assets/images/tomato3.png'),
+  require('@/../assets/images/tomato4.png'),
+  require('@/../assets/images/tomato5.png'),
+];
+
+function DailySessionRow({
   data,
-  maxVal,
+  workDuration,
 }: {
   data: { label: string; count: number }[];
-  maxVal: number;
+  workDuration: number;
 }) {
-  const barMax = Math.max(maxVal, 4);
   return (
     <View style={chartStyles.container}>
-      <View style={chartStyles.barsRow}>
-        {data.map((d, i) => {
-          const height = barMax > 0 ? (d.count / barMax) * 100 : 0;
-          return (
-            <View key={i} style={chartStyles.barCol}>
-              <View style={chartStyles.barTrack}>
-                <View
-                  style={[
-                    chartStyles.barFill,
-                    {
-                      height: `${height}%`,
-                      backgroundColor: d.count > 0 ? colors.primary : colors.muted,
-                    },
-                  ]}
-                />
-              </View>
-              <Text style={chartStyles.barLabel} numberOfLines={1}>
-                {d.label}
-              </Text>
+      {data.map((d, i) => {
+        const minutes = d.count * workDuration;
+        return (
+          <View key={i} style={chartStyles.dayRow}>
+            <Text style={chartStyles.dayLabel}>{d.label}</Text>
+            <View style={chartStyles.tomatoRow}>
+              {d.count > 0 ? (
+                Array.from({ length: Math.min(d.count, 8) }).map((_, ti) => (
+                  <Image
+                    key={ti}
+                    source={TOMATO_IMAGES[ti % TOMATO_IMAGES.length]}
+                    style={chartStyles.tomatoIcon}
+                    resizeMode="contain"
+                  />
+                ))
+              ) : (
+                <Text style={chartStyles.emptyDash}>{'—'}</Text>
+              )}
+              {d.count > 8 && (
+                <Text style={chartStyles.overflowText}>{`+${d.count - 8}`}</Text>
+              )}
             </View>
-          );
-        })}
-      </View>
+            <Text style={chartStyles.dayStat}>
+              {d.count > 0 ? `${minutes}분 / ${d.count}세션` : ''}
+            </Text>
+          </View>
+        );
+      })}
     </View>
   );
 }
 
 const chartStyles = StyleSheet.create({
-  container: {
-    height: 140,
-  },
-  barsRow: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: 2,
-  },
-  barCol: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  barTrack: {
-    width: '80%',
-    height: 100,
-    justifyContent: 'flex-end',
-  },
-  barFill: {
-    width: '100%',
-    borderTopLeftRadius: 4,
-    borderTopRightRadius: 4,
-    minHeight: 2,
-  },
-  barLabel: {
-    fontSize: 9,
-    color: colors.mutedForeground,
-    marginTop: 4,
-    textAlign: 'center',
-  },
+  container: { gap: 6 },
+  dayRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 3 },
+  dayLabel: { fontSize: 11, fontFamily: 'KotraGothic', color: colors.mutedForeground, width: 36 },
+  tomatoRow: { flexDirection: 'row', alignItems: 'center', gap: 2, flex: 1 },
+  tomatoIcon: { width: 20, height: 20 },
+  emptyDash: { fontSize: 14, color: colors.muted },
+  overflowText: { fontSize: 11, fontFamily: 'KotraGothic', color: colors.mutedForeground, marginLeft: 2 },
+  dayStat: { fontSize: 10, fontFamily: 'KotraGothic', color: colors.mutedForeground, width: 72, textAlign: 'right' },
 });
+
+/* ── Main screen ── */
 
 export function StatsScreen() {
   const [period, setPeriod] = useState<Period>('week');
+  const [refreshKey, setRefreshKey] = useState(0);
   const { memberships, allMembers, memberId, activeTeamCode } = useSocial();
+  const { settings } = useTimer();
   const insets = useSafeAreaInsets();
 
   const [backendStats, setBackendStats] = useState<BackendStats | null>(null);
   const [backendLoading, setBackendLoading] = useState(false);
+
+  const handleReset = () => {
+    clearAllStats();
+    setRefreshKey((k) => k + 1);
+  };
 
   const activeMembership = useMemo(
     () => memberships.find((m) => m.code === activeTeamCode) ?? null,
@@ -136,98 +150,71 @@ export function StatsScreen() {
   useEffect(() => {
     if (!activeMembership) return;
     setBackendLoading(true);
+    const apiPeriod = period === 'month' ? 'all' : period;
     api
-      .getStats(activeMembership.memberId, activeMembership.token, period)
-      .then((data) => {
-        setBackendStats(data);
-        setBackendLoading(false);
-      })
+      .getStats(activeMembership.memberId, activeMembership.token, apiPeriod)
+      .then((data) => { setBackendStats(data); setBackendLoading(false); })
       .catch(() => setBackendLoading(false));
   }, [activeMembership, period]);
 
-  const sessions: SessionEvent[] = useMemo(() => getSessions(), []);
-  const reactions: NowReaction[] = useMemo(() => getNowReactions(), []);
+  const sessions: SessionEvent[] = useMemo(() => getSessions(), [refreshKey]);
+  const reactions: NowReaction[] = useMemo(() => getNowReactions(), [refreshKey]);
+  const workSessions = useMemo(() => sessions.filter((s) => s.type === 'work'), [sessions]);
 
-  const workSessions = useMemo(
-    () => sessions.filter((s) => s.type === 'work'),
-    [sessions],
-  );
-
-  const streak = useMemo(() => {
-    if (backendStats) return backendStats.streak;
-    return calcStreak(sessions);
-  }, [backendStats, sessions]);
-
-  const filteredReactions = useMemo(() => {
-    if (period === 'today') {
-      const today = todayStr();
-      return reactions.filter((r) => r.date === today);
-    }
-    if (period === 'week') {
-      const days = new Set(lastNDays(7));
-      return reactions.filter((r) => days.has(r.date));
-    }
-    return reactions;
-  }, [reactions, period]);
+  const periodDays = period === 'today' ? 1 : period === 'week' ? 7 : 30;
 
   const filteredSessions = useMemo(() => {
     if (period === 'today') {
       const today = todayStr();
       return workSessions.filter((s) => s.date === today);
     }
-    if (period === 'week') {
-      const days = new Set(lastNDays(7));
-      return workSessions.filter((s) => days.has(s.date));
+    const days = new Set(lastNDays(periodDays));
+    return workSessions.filter((s) => days.has(s.date));
+  }, [workSessions, period, periodDays]);
+
+  const filteredReactions = useMemo(() => {
+    if (period === 'today') {
+      const today = todayStr();
+      return reactions.filter((r) => r.date === today);
     }
-    return workSessions;
-  }, [workSessions, period]);
+    const days = new Set(lastNDays(periodDays));
+    return reactions.filter((r) => days.has(r.date));
+  }, [reactions, period, periodDays]);
 
-  const localAvgMs = useMemo(
-    () => avgReactionMsCalc(filteredReactions),
-    [filteredReactions],
-  );
-  const localCompliance = useMemo(
-    () => complianceRateCalc(filteredReactions),
-    [filteredReactions],
-  );
+  // ── Derived stats ──
+  const streak = useMemo(() => backendStats?.streak ?? calcStreak(sessions), [backendStats, sessions]);
+  const totalWork = backendStats?.totalSessions ?? filteredSessions.length;
+  const workMin = useMemo(() => totalWorkMinutes(filteredSessions), [filteredSessions]);
+  const workTimeDisplay = formatWorkTime(workMin);
 
+  const localAvgMs = useMemo(() => avgReactionMsCalc(filteredReactions), [filteredReactions]);
+  const localCompliance = useMemo(() => complianceRateCalc(filteredReactions), [filteredReactions]);
   const avgMs = backendStats?.avgReactionMs ?? localAvgMs;
   const compliance = backendStats?.complianceRate ?? localCompliance;
-  const totalWork = backendStats?.totalSessions ?? filteredSessions.length;
   const tier = avgMs !== null ? reactionTier(avgMs) : null;
 
+  // ── Bar chart data ──
   const barData = useMemo(() => {
     const serverDaily = backendStats?.daily;
     if (serverDaily && serverDaily.length > 0) {
       return serverDaily.map((d) => ({
-        date: d.date,
-        label: dateLabel(d.date),
-        count: d.sessions,
-        compRate: d.complianceRate,
+        date: d.date, label: dateLabel(d.date), count: d.sessions, compRate: d.complianceRate,
       }));
     }
     if (period === 'today') {
       const today = todayStr();
       const count = filteredSessions.filter((s) => s.date === today).length;
-      return [{ date: today, label: '\uC624\uB298', count, compRate: localCompliance }];
+      return [{ date: today, label: '오늘', count, compRate: localCompliance }];
     }
-    const days = period === 'week' ? lastNDays(7) : lastNDays(30);
+    const days = lastNDays(periodDays);
     const countMap = new Map<string, number>();
     for (const s of workSessions) {
-      if (days.includes(s.date)) {
-        countMap.set(s.date, (countMap.get(s.date) ?? 0) + 1);
-      }
+      if (days.includes(s.date)) countMap.set(s.date, (countMap.get(s.date) ?? 0) + 1);
     }
-    return days.map((d) => ({
-      date: d,
-      label: dateLabel(d),
-      count: countMap.get(d) ?? 0,
-      compRate: null as number | null,
-    }));
-  }, [backendStats, period, filteredSessions, workSessions, localCompliance]);
+    return days.map((d) => ({ date: d, label: dateLabel(d), count: countMap.get(d) ?? 0, compRate: null as number | null }));
+  }, [backendStats, period, filteredSessions, workSessions, localCompliance, periodDays]);
 
-  const maxBar = Math.max(...barData.map((d) => d.count), 1);
-
+  // ── Team leaderboard ──
   const prevRanksRef = useRef<Map<string, number>>(new Map());
 
   const teamLeaderboards = useMemo(() => {
@@ -241,10 +228,7 @@ export function StatsScreen() {
           dismissedCount: mem.dismissedCount,
           avgReactionMs: mem.avgReactionMs,
           reactionCount: mem.reactionCount,
-          compliance:
-            mem.nowCount > 0
-              ? Math.round((mem.dismissedCount / mem.nowCount) * 100)
-              : null,
+          compliance: mem.nowCount > 0 ? Math.round((mem.dismissedCount / mem.nowCount) * 100) : null,
         }))
         .sort((a, b) => {
           const aHas = a.avgReactionMs > 0 && a.reactionCount > 0;
@@ -269,14 +253,14 @@ export function StatsScreen() {
         prevRanksRef.current.set(`${m.code}:${row.id}`, i);
       });
 
-      return { code: m.code, rows: ranksWithDelta };
+      return { code: m.code, name: m.teamName || '', rows: ranksWithDelta };
     });
   }, [memberships, allMembers]);
 
   const tabs: { key: Period; label: string }[] = [
-    { key: 'today', label: '\uC624\uB298' },
-    { key: 'week', label: '\uC8FC\uAC04' },
-    { key: 'all', label: '\uC804\uCCB4' },
+    { key: 'today', label: '오늘' },
+    { key: 'week', label: '주간' },
+    { key: 'month', label: '월간' },
   ];
 
   const hasNoTeam = memberships.length === 0;
@@ -286,7 +270,7 @@ export function StatsScreen() {
       style={styles.container}
       contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 100 }]}
     >
-      <Text style={styles.title}>{'\uD1B5\uACC4'}</Text>
+      <Text style={styles.title}>{'통계'}</Text>
 
       {/* Period tabs */}
       <View style={styles.tabsRow}>
@@ -303,42 +287,124 @@ export function StatsScreen() {
         ))}
       </View>
 
+      {/* ═══════════════════════════════════ */}
+      {/*       SECTION 1: 내 작업           */}
+      {/* ═══════════════════════════════════ */}
+
+      <Text style={styles.sectionTitle}>{'내 작업'}</Text>
+
       {/* Streak */}
       {streak > 0 && (
         <View style={styles.streakCard}>
-          <Text style={styles.streakEmoji}>{'\uD83D\uDD25'}</Text>
+          <Text style={styles.streakEmoji}>{'🔥'}</Text>
           <View>
-            <Text style={styles.streakTitle}>{streak}{'\uC77C \uC5F0\uC18D \uC9D1\uC911 \uC911'}</Text>
+            <Text style={styles.streakTitle}>{streak}{'일 연속 집중 중'}</Text>
             <Text style={styles.streakSub}>
-              {'\uC624\uB298\uB3C4 \uC138\uC158\uC744 \uC644\uB8CC\uD574 \uC2A4\uD2B8\uB9AD\uC744 \uC774\uC5B4\uAC00\uC138\uC694!'}
+              {'오늘도 세션을 완료해 집중력을 이어가세요!'}
             </Text>
           </View>
         </View>
       )}
 
+      {/* Total work time + Sessions — two stat boxes */}
+      <View style={styles.statBoxRow}>
+        <View style={styles.statBox}>
+          <Text style={styles.statBoxLabel}>{'총 작업 시간'}</Text>
+          <View style={styles.statBoxValueRow}>
+            <Text style={styles.statBoxValue}>{workTimeDisplay.value}</Text>
+            <Text style={styles.statBoxUnit}>{workTimeDisplay.unit}</Text>
+          </View>
+        </View>
+        <View style={styles.statBox}>
+          <Text style={styles.statBoxLabel}>{'완료 세션'}</Text>
+          <View style={styles.statBoxValueRow}>
+            <Text style={styles.statBoxValue}>{totalWork}</Text>
+            <Text style={styles.statBoxUnit}>{'회'}</Text>
+          </View>
+        </View>
+      </View>
+
       {/* Sessions chart */}
       <View style={styles.card}>
         <View style={styles.cardHeader}>
           <Text style={styles.cardLabel}>
-            {'\uC644\uB8CC \uC138\uC158 '}
+            {'일별 세션 '}
             {backendLoading && (
               <Text style={{ color: colors.mutedForeground, fontSize: 11 }}>
-                {'(\uB3D9\uAE30\uD654 \uC911)'}
+                {'(동기화 중)'}
               </Text>
             )}
           </Text>
-          <View style={styles.cardValueRow}>
-            <Text style={styles.cardValue}>{totalWork}</Text>
-            <Text style={styles.cardUnit}>{'\uD68C'}</Text>
-          </View>
         </View>
-        <SimpleBarChart data={barData} maxVal={maxBar} />
+        <DailySessionRow data={barData} workDuration={settings.workDuration} />
       </View>
 
-      {/* Compliance bars */}
+      {/* ═══════════════════════════════════ */}
+      {/*       SECTION 2: 휴식 준수          */}
+      {/* ═══════════════════════════════════ */}
+
+      <Text style={styles.sectionTitle}>{'NOW! 준수'}</Text>
+
+      {/* Compliance + Reaction speed */}
+      <View style={styles.card}>
+        {avgMs !== null && tier !== null ? (
+          <View style={{ gap: 12 }}>
+            {/* Compliance rate */}
+            {compliance !== null && (
+              <View style={{ gap: 6 }}>
+                <View style={styles.complianceRow}>
+                  <Text style={styles.cardLabel}>{'NOW! 준수율'}</Text>
+                  <Text style={styles.complianceValue}>{compliance}%</Text>
+                </View>
+                <View style={styles.compTrack}>
+                  <View
+                    style={[
+                      styles.compFill,
+                      {
+                        width: `${compliance}%`,
+                        backgroundColor:
+                          compliance >= 80 ? colors.green500
+                            : compliance >= 50 ? '#eab308'
+                              : colors.red500,
+                      },
+                    ]}
+                  />
+                </View>
+                <Text style={styles.compHint}>
+                  {'제때 일하고 제때 쉽시다!'}
+                </Text>
+              </View>
+            )}
+
+            {/* Reaction speed */}
+            <View style={styles.divider} />
+            <View style={{ gap: 4 }}>
+              <Text style={styles.cardLabel}>{'NOW! 준수 속도'}</Text>
+              <View style={styles.reactionRow}>
+                <Text style={styles.reactionValue}>{msToSec(avgMs)}</Text>
+                <Text style={[styles.reactionTier, { color: tier.color }]}>
+                  {tier.grade} {tier.label}
+                </Text>
+              </View>
+              <Text style={[styles.compHint, { color: tier.color }]}>
+                {tier.description}
+              </Text>
+            </View>
+          </View>
+        ) : (
+          <View>
+            <Text style={styles.cardLabel}>{'NOW! 준수'}</Text>
+            <Text style={styles.emptyHint}>
+              {'아직 NOW! 반응 데이터가 없어요.\n세션을 시작하면 기록됩니다.'}
+            </Text>
+          </View>
+        )}
+      </View>
+
+      {/* Daily compliance bars */}
       {backendStats && backendStats.daily.some((d) => d.complianceRate !== null) && (
         <View style={styles.card}>
-          <Text style={styles.cardLabel}>{'\uC77C\uBCC4 NOW! \uC900\uC218\uC728'}</Text>
+          <Text style={styles.cardLabel}>{'일별 준수율'}</Text>
           <View style={{ gap: 8, marginTop: 8 }}>
             {backendStats.daily
               .filter((d) => d.complianceRate !== null)
@@ -353,10 +419,8 @@ export function StatsScreen() {
                         {
                           width: `${d.complianceRate ?? 0}%`,
                           backgroundColor:
-                            (d.complianceRate ?? 0) >= 80
-                              ? colors.green500
-                              : (d.complianceRate ?? 0) >= 50
-                                ? '#eab308'
+                            (d.complianceRate ?? 0) >= 80 ? colors.green500
+                              : (d.complianceRate ?? 0) >= 50 ? '#eab308'
                                 : colors.red500,
                         },
                       ]}
@@ -369,69 +433,40 @@ export function StatsScreen() {
         </View>
       )}
 
-      {/* Reaction speed */}
-      <View style={styles.card}>
-        <Text style={styles.cardLabel}>{'NOW! \uBC18\uC751 \uC18D\uB3C4'}</Text>
-        {avgMs !== null && tier !== null ? (
-          <View style={{ gap: 8, marginTop: 8 }}>
-            <View style={styles.reactionRow}>
-              <Text style={styles.reactionValue}>{msToSec(avgMs)}</Text>
-              <Text style={[styles.reactionTier, { color: tier.color }]}>
-                {tier.grade} {tier.label}
-              </Text>
-            </View>
-            {compliance !== null && (
-              <>
-                <View style={styles.complianceRow}>
-                  <Text style={styles.complianceLabel}>{'\uC804\uCCB4 \uC900\uC218\uC728'}</Text>
-                  <Text style={styles.complianceValue}>{compliance}%</Text>
-                </View>
-                <View style={styles.compTrack}>
-                  <View
-                    style={[styles.compFill, { width: `${compliance}%`, backgroundColor: colors.primary }]}
-                  />
-                </View>
-              </>
-            )}
-          </View>
-        ) : (
-          <Text style={styles.emptyHint}>
-            {'\uC544\uC9C1 NOW! \uBC18\uC751 \uB370\uC774\uD130\uAC00 \uC5C6\uC5B4\uC694.\n\uC138\uC158\uC744 \uC2DC\uC791\uD558\uBA74 \uAE30\uB85D\uB429\uB2C8\uB2E4.'}
-          </Text>
-        )}
-      </View>
+      {/* ═══════════════════════════════════ */}
+      {/*       SECTION 3: 팀 보드           */}
+      {/* ═══════════════════════════════════ */}
+
+      <Text style={styles.sectionTitle}>{'팀 보드'}</Text>
 
       {/* No team hint */}
       {hasNoTeam && (
         <View style={styles.noTeamCard}>
           <Text style={styles.noTeamText}>
-            {'\uD300\uC5D0 \uCC38\uAC00\uD558\uBA74 \uD300\uC6D0 \uB9AC\uB354\uBCF4\uB4DC\uAC00 \uD45C\uC2DC\uB429\uB2C8\uB2E4.'}
+            {'팀에 참가하면 팀원 리더보드가 표시됩니다.'}
           </Text>
         </View>
       )}
 
       {/* Team leaderboards */}
-      {teamLeaderboards.map(({ code, rows }) => (
+      {teamLeaderboards.map(({ code, name, rows }) => (
         <View key={code} style={styles.card}>
           <View style={styles.leaderHeader}>
-            <Text style={styles.cardLabel}>
-              {'\uD300 \uB9AC\uB354\uBCF4\uB4DC '}
-            </Text>
+            <Text style={styles.cardLabel}>{'NOW! 준수 속도 순위 '}</Text>
             <View style={styles.codeBadge}>
-              <Text style={styles.codeBadgeText}>{code}</Text>
+              <Text style={styles.codeBadgeText}>{name || code}</Text>
             </View>
-            <Text style={styles.leaderSub}>{' (\uBC18\uC751\uC18D\uB3C4 \uC21C\uC704)'}</Text>
           </View>
           {rows.length === 0 ? (
-            <Text style={styles.emptyHint}>{'\uBA64\uBC84\uAC00 \uC5C6\uC5B4\uC694.'}</Text>
+            <Text style={styles.emptyHint}>{'멤버가 없어요.'}</Text>
           ) : (
             <View style={styles.leaderTable}>
               {/* Header */}
               <View style={styles.leaderRow}>
                 <Text style={[styles.leaderCell, styles.leaderHeaderText, { width: 28 }]}>#</Text>
-                <Text style={[styles.leaderCell, styles.leaderHeaderText, { flex: 1 }]}>{'\uC774\uB984'}</Text>
-                <Text style={[styles.leaderCell, styles.leaderHeaderText, { width: 50, textAlign: 'right' }]}>{'\uC900\uC218\uC728'}</Text>
-                <Text style={[styles.leaderCell, styles.leaderHeaderText, { width: 80, textAlign: 'right' }]}>{'\uBC18\uC751\uC18D\uB3C4'}</Text>
+                <Text style={[styles.leaderCell, styles.leaderHeaderText, { flex: 1 }]}>{'이름'}</Text>
+                <Text style={[styles.leaderCell, styles.leaderHeaderText, { width: 50, textAlign: 'right' }]}>{'준수율'}</Text>
+                <Text style={[styles.leaderCell, styles.leaderHeaderText, { width: 80, textAlign: 'right' }]}>{'준수속도'}</Text>
               </View>
               {rows.map((row, i) => {
                 const t =
@@ -439,24 +474,24 @@ export function StatsScreen() {
                     ? reactionTier(row.avgReactionMs)
                     : null;
                 const medal =
-                  i === 0 ? '\uD83E\uDD47' : i === 1 ? '\uD83E\uDD48' : i === 2 ? '\uD83E\uDD49' : null;
+                  i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : null;
                 const isMe = row.id === memberId;
                 return (
                   <View
                     key={row.id}
                     style={[
                       styles.leaderRow,
-                      isMe && { backgroundColor: 'rgba(75,158,255,0.05)' },
+                      isMe && { backgroundColor: 'rgba(232,87,58,0.05)' },
                       { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
                     ]}
                   >
                     <View style={[styles.leaderCell, { width: 28, flexDirection: 'row', alignItems: 'center', gap: 2 }]}>
-                      <Text style={{ fontSize: 13 }}>{medal ?? `${i + 1}`}</Text>
+                      <Text style={{ fontSize: 13, fontFamily: 'KotraGothic' }}>{medal ?? `${i + 1}`}</Text>
                       {row.delta !== 0 && (
                         <Text
                           style={{
                             fontSize: 9,
-                            fontWeight: '700',
+                            fontFamily: 'KotraBold',
                             color: row.delta > 0 ? colors.green500 : colors.red500,
                           }}
                         >
@@ -465,18 +500,18 @@ export function StatsScreen() {
                       )}
                     </View>
                     <View style={[styles.leaderCell, { flex: 1, flexDirection: 'row', gap: 4 }]}>
-                      <Text style={{ fontSize: 13, fontWeight: '500', color: colors.foreground }} numberOfLines={1}>
+                      <Text style={{ fontSize: 13, fontFamily: 'KotraGothic', color: colors.foreground }} numberOfLines={1}>
                         {row.nickname}
                       </Text>
-                      {isMe && <Text style={{ fontSize: 12, color: colors.primary }}>({'\uB098'})</Text>}
+                      {isMe && <Text style={{ fontSize: 12, color: colors.tomato }}>{'(나)'}</Text>}
                     </View>
-                    <Text style={[styles.leaderCell, { width: 50, textAlign: 'right', fontSize: 13, color: colors.foreground }]}>
+                    <Text style={[styles.leaderCell, { width: 50, textAlign: 'right', fontSize: 13, fontFamily: 'Komputa-Regular', color: colors.foreground }]}>
                       {row.compliance !== null ? `${row.compliance}%` : '-'}
                     </Text>
                     <Text
                       style={[
                         styles.leaderCell,
-                        { width: 80, textAlign: 'right', fontSize: 13, color: t?.color ?? colors.mutedForeground },
+                        { width: 80, textAlign: 'right', fontSize: 13, fontFamily: 'Komputa-Regular', color: t?.color ?? colors.mutedForeground },
                       ]}
                     >
                       {t ? `${t.grade} ${msToSec(row.avgReactionMs)}` : '-'}
@@ -488,6 +523,11 @@ export function StatsScreen() {
           )}
         </View>
       ))}
+
+      {/* Reset */}
+      <TouchableOpacity onPress={handleReset} style={styles.resetButton}>
+        <Text style={styles.resetText}>{'통계 초기화'}</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 }
@@ -499,13 +539,19 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 16,
-    gap: 16,
+    gap: 12,
   },
   title: {
     fontSize: 24,
-    fontWeight: '700',
+    fontFamily: 'KotraBold',
     color: colors.foreground,
     letterSpacing: -0.5,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontFamily: 'KotraBold',
+    color: colors.foreground,
+    marginTop: 8,
   },
   tabsRow: {
     flexDirection: 'row',
@@ -519,15 +565,16 @@ const styles = StyleSheet.create({
     backgroundColor: colors.muted,
   },
   tabActive: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.tomato,
   },
   tabText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: 'KotraGothic',
     color: colors.mutedForeground,
   },
   tabTextActive: {
     color: '#fff',
+    fontFamily: 'KotraBold',
   },
   streakCard: {
     flexDirection: 'row',
@@ -544,14 +591,49 @@ const styles = StyleSheet.create({
     fontSize: 24,
   },
   streakTitle: {
-    fontWeight: '600',
+    fontFamily: 'KotraBold',
     color: '#92400e',
     fontSize: 14,
   },
   streakSub: {
     fontSize: 12,
+    fontFamily: 'KotraGothic',
     color: '#b45309',
     marginTop: 2,
+  },
+  /* Two stat boxes side by side */
+  statBoxRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  statBox: {
+    flex: 1,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+    padding: 16,
+    gap: 4,
+  },
+  statBoxLabel: {
+    fontSize: 12,
+    fontFamily: 'KotraGothic',
+    color: colors.mutedForeground,
+  },
+  statBoxValueRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 2,
+  },
+  statBoxValue: {
+    fontSize: 28,
+    fontFamily: 'Komputa-Bold',
+    color: colors.foreground,
+  },
+  statBoxUnit: {
+    fontSize: 14,
+    fontFamily: 'KotraGothic',
+    color: colors.mutedForeground,
   },
   card: {
     borderRadius: 12,
@@ -568,22 +650,28 @@ const styles = StyleSheet.create({
   },
   cardLabel: {
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: 'KotraGothic',
     color: colors.mutedForeground,
   },
-  cardValueRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: colors.border,
   },
-  cardValue: {
-    fontSize: 24,
-    fontWeight: '700',
+  complianceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  complianceValue: {
+    fontSize: 20,
+    fontFamily: 'Komputa-Bold',
     color: colors.foreground,
   },
-  cardUnit: {
-    fontSize: 14,
+  compHint: {
+    fontSize: 12,
+    fontFamily: 'KotraGothic',
     color: colors.mutedForeground,
-    marginLeft: 4,
+    marginTop: 2,
   },
   compRow: {
     flexDirection: 'row',
@@ -608,7 +696,7 @@ const styles = StyleSheet.create({
   },
   compValue: {
     fontSize: 12,
-    fontWeight: '500',
+    fontFamily: 'Komputa-Regular',
     width: 36,
     textAlign: 'right',
     color: colors.foreground,
@@ -620,29 +708,16 @@ const styles = StyleSheet.create({
   },
   reactionValue: {
     fontSize: 28,
-    fontWeight: '700',
+    fontFamily: 'Komputa-Bold',
     color: colors.foreground,
   },
   reactionTier: {
     fontSize: 18,
-    fontWeight: '600',
-  },
-  complianceRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  complianceLabel: {
-    fontSize: 14,
-    color: colors.mutedForeground,
-  },
-  complianceValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.foreground,
+    fontFamily: 'KotraBold',
   },
   emptyHint: {
     fontSize: 14,
+    fontFamily: 'KotraGothic',
     color: colors.mutedForeground,
     marginTop: 8,
     lineHeight: 22,
@@ -658,6 +733,7 @@ const styles = StyleSheet.create({
   },
   noTeamText: {
     fontSize: 14,
+    fontFamily: 'KotraGothic',
     color: colors.mutedForeground,
   },
   leaderHeader: {
@@ -676,10 +752,6 @@ const styles = StyleSheet.create({
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
     color: colors.foreground,
   },
-  leaderSub: {
-    fontSize: 11,
-    color: colors.mutedForeground,
-  },
   leaderTable: {
     marginTop: 4,
   },
@@ -691,7 +763,19 @@ const styles = StyleSheet.create({
   leaderCell: {},
   leaderHeaderText: {
     fontSize: 11,
-    fontWeight: '500',
+    fontFamily: 'KotraGothic',
     color: colors.mutedForeground,
+  },
+  resetButton: {
+    alignSelf: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    marginTop: 8,
+  },
+  resetText: {
+    fontSize: 12,
+    fontFamily: 'KotraGothic',
+    color: colors.mutedForeground,
+    textDecorationLine: 'underline',
   },
 });

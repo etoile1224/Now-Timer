@@ -13,10 +13,11 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
 import QRCode from 'react-native-qrcode-svg';
-import { Users, Copy, Check, LogOut, Zap, QrCode, Plus } from 'lucide-react-native';
+import { Users, Copy, Check, LogOut, Zap, QrCode, Plus, Pencil } from 'lucide-react-native';
 import { useSocial } from '@/context/SocialContext';
-import { playPokeSound } from '@/lib/sounds';
-import { API_BASE_URL, type Member } from '@/lib/api';
+import { playPokeSound, playVoicePoke } from '@/lib/sounds';
+import { api, API_BASE_URL, type Member } from '@/lib/api';
+import { PixelAvatar, parseAvatarData } from '@/components/PixelAvatar';
 import { colors } from '@/lib/colors';
 
 function pokeParticle(name: string): string {
@@ -67,14 +68,22 @@ function MemberCard({
   const canPoke =
     !isMe &&
     (member.status === 'nowAlert' || member.status === 'returnAlert');
+  const [pokeSent, setPokeSent] = useState(false);
+
+  const handlePoke = () => {
+    onPoke();
+    Vibration.vibrate(100);
+    setPokeSent(true);
+    setTimeout(() => setPokeSent(false), 2000);
+  };
 
   return (
     <View style={[memberStyles.card, isMe && memberStyles.cardMe]}>
-      <View style={memberStyles.avatar}>
-        <Text style={memberStyles.avatarText}>
-          {member.nickname.slice(0, 1).toUpperCase()}
-        </Text>
-      </View>
+      <PixelAvatar
+        data={parseAvatarData(member.avatarData)}
+        size={36}
+        fallbackLetter={member.nickname}
+      />
 
       <View style={memberStyles.info}>
         <View style={memberStyles.nameRow}>
@@ -94,9 +103,16 @@ function MemberCard({
       </View>
 
       {canPoke && (
-        <TouchableOpacity onPress={onPoke} style={memberStyles.pokeButton} activeOpacity={0.7}>
-          <Zap size={12} color="#ea580c" />
-          <Text style={memberStyles.pokeText}>{'\uAE68\uC6B0\uAE30'}</Text>
+        <TouchableOpacity
+          onPress={handlePoke}
+          disabled={pokeSent}
+          style={[memberStyles.pokeButton, pokeSent && memberStyles.pokeSent]}
+          activeOpacity={0.7}
+        >
+          <Zap size={12} color={pokeSent ? '#fff' : '#ea580c'} />
+          <Text style={[memberStyles.pokeText, pokeSent && { color: '#fff' }]}>
+            {pokeSent ? '\uBCF4\uB0C4!' : '\uAE68\uC6B0\uAE30'}
+          </Text>
         </TouchableOpacity>
       )}
     </View>
@@ -116,8 +132,8 @@ const memberStyles = StyleSheet.create({
     marginBottom: 8,
   },
   cardMe: {
-    borderColor: colors.primary,
-    backgroundColor: 'rgba(75,158,255,0.05)',
+    borderColor: colors.tomato,
+    backgroundColor: 'rgba(232,87,58,0.05)',
   },
   avatar: {
     width: 36,
@@ -129,7 +145,7 @@ const memberStyles = StyleSheet.create({
   },
   avatarText: {
     fontSize: 14,
-    fontWeight: '700',
+    fontFamily: 'KotraBold',
     color: colors.mutedForeground,
   },
   info: {
@@ -142,14 +158,14 @@ const memberStyles = StyleSheet.create({
   },
   name: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'KotraBold',
     color: colors.foreground,
     flexShrink: 1,
   },
   meTag: {
     fontSize: 12,
-    color: colors.primary,
-    fontWeight: '500',
+    color: colors.tomato,
+    fontFamily: 'KotraGothic',
   },
   statusRow: {
     flexDirection: 'row',
@@ -164,7 +180,7 @@ const memberStyles = StyleSheet.create({
   },
   statusText: {
     fontSize: 11,
-    fontWeight: '600',
+    fontFamily: 'KotraGothic',
   },
   rateText: {
     fontSize: 12,
@@ -183,8 +199,12 @@ const memberStyles = StyleSheet.create({
   },
   pokeText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'KotraBold',
     color: '#ea580c',
+  },
+  pokeSent: {
+    backgroundColor: '#ea580c',
+    borderColor: '#ea580c',
   },
 });
 
@@ -233,7 +253,7 @@ const teamStatsStyles = StyleSheet.create({
   },
   statValue: {
     fontSize: 24,
-    fontWeight: '900',
+    fontFamily: 'Komputa-Bold',
     color: colors.foreground,
   },
   statLabel: {
@@ -244,9 +264,14 @@ const teamStatsStyles = StyleSheet.create({
 });
 
 function TeamView() {
-  const { activeTeamCode, memberId, members, poke, leaveTeam } = useSocial();
+  const { activeTeamCode, memberId, members, memberships, poke, leaveTeam, renameTeam } = useSocial();
   const [copied, setCopied] = useState(false);
   const [showQr, setShowQr] = useState(false);
+  const [editingName, setEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState('');
+
+  const activeMembership = memberships.find((m) => m.code === activeTeamCode);
+  const teamName = activeMembership?.teamName || '';
 
   const joinUrl = activeTeamCode
     ? `${API_BASE_URL}/social?join=${activeTeamCode}`
@@ -259,14 +284,56 @@ function TeamView() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const startRename = () => {
+    setNameInput(teamName);
+    setEditingName(true);
+  };
+
+  const confirmRename = async () => {
+    if (!activeTeamCode) return;
+    const trimmed = nameInput.trim();
+    await renameTeam(activeTeamCode, trimmed);
+    setEditingName(false);
+  };
+
   const memberList = Object.values(members).sort((a) =>
     a.id === memberId ? -1 : 1,
   );
 
   return (
     <View style={{ gap: 16 }}>
-      {/* Team code card */}
+      {/* Team name + code card */}
       <View style={teamStyles.codeCard}>
+        {/* Team name */}
+        <View style={teamStyles.teamNameRow}>
+          {editingName ? (
+            <View style={teamStyles.nameEditRow}>
+              <TextInput
+                style={teamStyles.nameEditInput}
+                value={nameInput}
+                onChangeText={(t) => setNameInput(t.slice(0, 30))}
+                placeholder={'팀 이름 입력'}
+                placeholderTextColor={colors.mutedForeground}
+                autoFocus
+                onSubmitEditing={confirmRename}
+              />
+              <TouchableOpacity onPress={confirmRename} style={teamStyles.nameEditBtn}>
+                <Check size={14} color={colors.stem} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setEditingName(false)} style={teamStyles.nameEditBtn}>
+                <Text style={{ fontSize: 14, color: colors.mutedForeground }}>{'✕'}</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity onPress={startRename} style={teamStyles.teamNameBtn} activeOpacity={0.7}>
+              <Text style={teamStyles.teamNameText} numberOfLines={1}>
+                {teamName || '팀 이름 설정'}
+              </Text>
+              <Pencil size={12} color={colors.mutedForeground} />
+            </TouchableOpacity>
+          )}
+        </View>
+
         <Text style={teamStyles.codeLabel}>{'\uD300 \uCF54\uB4DC'}</Text>
         <View style={teamStyles.codeRow}>
           <Text style={teamStyles.codeText}>{activeTeamCode}</Text>
@@ -282,9 +349,9 @@ function TeamView() {
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => setShowQr((v) => !v)}
-            style={[teamStyles.iconButton, showQr && { backgroundColor: 'rgba(75,158,255,0.1)' }]}
+            style={[teamStyles.iconButton, showQr && { backgroundColor: 'rgba(232,87,58,0.1)' }]}
           >
-            <QrCode size={16} color={showQr ? colors.primary : colors.mutedForeground} />
+            <QrCode size={16} color={showQr ? colors.tomato : colors.mutedForeground} />
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => activeTeamCode && leaveTeam(activeTeamCode)}
@@ -343,9 +410,43 @@ const teamStyles = StyleSheet.create({
     borderColor: colors.cardBorder,
     padding: 16,
   },
+  teamNameRow: {
+    marginBottom: 12,
+  },
+  teamNameBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  teamNameText: {
+    fontSize: 18,
+    fontFamily: 'KotraBold',
+    color: colors.foreground,
+    flexShrink: 1,
+  },
+  nameEditRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  nameEditInput: {
+    flex: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: colors.cream,
+    borderWidth: 1,
+    borderColor: colors.border,
+    fontSize: 16,
+    fontFamily: 'KotraBold',
+    color: colors.foreground,
+  },
+  nameEditBtn: {
+    padding: 8,
+  },
   codeLabel: {
     fontSize: 11,
-    fontWeight: '600',
+    fontFamily: 'KotraGothic',
     color: colors.mutedForeground,
     textTransform: 'uppercase',
     letterSpacing: 1,
@@ -358,7 +459,7 @@ const teamStyles = StyleSheet.create({
   },
   codeText: {
     fontSize: 24,
-    fontWeight: '900',
+    fontFamily: 'Komputa-Bold',
     letterSpacing: 4,
     color: colors.foreground,
     flex: 1,
@@ -374,7 +475,7 @@ const teamStyles = StyleSheet.create({
   },
   codeButtonText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontFamily: 'KotraGothic',
     color: colors.mutedForeground,
   },
   iconButton: {
@@ -384,6 +485,7 @@ const teamStyles = StyleSheet.create({
   },
   codeHint: {
     fontSize: 12,
+    fontFamily: 'KotraGothic',
     color: colors.mutedForeground,
     marginTop: 8,
   },
@@ -404,12 +506,13 @@ const teamStyles = StyleSheet.create({
   },
   qrHint: {
     fontSize: 12,
+    fontFamily: 'KotraGothic',
     color: colors.mutedForeground,
     textAlign: 'center',
   },
   membersLabel: {
     fontSize: 11,
-    fontWeight: '600',
+    fontFamily: 'KotraGothic',
     color: colors.mutedForeground,
     textTransform: 'uppercase',
     letterSpacing: 1,
@@ -429,6 +532,7 @@ function AddTeamView({ onCancel }: { onCancel?: () => void }) {
   const { createTeam, joinTeam, memberships } = useSocial();
   const [view, setView] = useState<JoinView>('landing');
   const [nickname, setNickname] = useState('');
+  const [teamNameInput, setTeamNameInput] = useState('');
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -440,7 +544,7 @@ function AddTeamView({ onCancel }: { onCancel?: () => void }) {
     setLoading(true);
     setError('');
     try {
-      await createTeam(nickname.trim());
+      await createTeam(nickname.trim(), teamNameInput.trim() || undefined);
     } catch {
       setError('\uD300 \uB9CC\uB4E4\uAE30\uC5D0 \uC2E4\uD328\uD588\uC5B4\uC694. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.');
     } finally {
@@ -474,7 +578,7 @@ function AddTeamView({ onCancel }: { onCancel?: () => void }) {
       <View style={addStyles.landing}>
         {!isAddMode && (
           <View style={addStyles.iconCircle}>
-            <Users size={32} color={colors.primary} />
+            <Users size={32} color={colors.tomato} />
           </View>
         )}
         <View style={addStyles.textCenter}>
@@ -521,6 +625,20 @@ function AddTeamView({ onCancel }: { onCancel?: () => void }) {
       <Text style={addStyles.formTitle}>
         {view === 'create' ? '\uD300 \uB9CC\uB4E4\uAE30' : '\uD300 \uCC38\uAC00\uD558\uAE30'}
       </Text>
+
+      {view === 'create' && (
+        <>
+          <Text style={addStyles.inputLabel}>{'팀 이름'}</Text>
+          <TextInput
+            style={addStyles.input}
+            placeholder={'예: 스터디 그룹, 개발팀'}
+            placeholderTextColor={colors.mutedForeground}
+            value={teamNameInput}
+            onChangeText={(t) => setTeamNameInput(t.slice(0, 30))}
+            autoCorrect={false}
+          />
+        </>
+      )}
 
       {view === 'join' && (
         <>
@@ -577,7 +695,7 @@ const addStyles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 16,
-    backgroundColor: 'rgba(75,158,255,0.1)',
+    backgroundColor: 'rgba(232,87,58,0.1)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -586,12 +704,13 @@ const addStyles = StyleSheet.create({
   },
   heading: {
     fontSize: 20,
-    fontWeight: '700',
+    fontFamily: 'KotraBold',
     color: colors.foreground,
     marginBottom: 4,
   },
   description: {
     fontSize: 14,
+    fontFamily: 'KotraGothic',
     color: colors.mutedForeground,
     textAlign: 'center',
     lineHeight: 22,
@@ -603,31 +722,32 @@ const addStyles = StyleSheet.create({
   primaryButton: {
     width: '100%',
     paddingVertical: 16,
-    backgroundColor: colors.primary,
+    backgroundColor: colors.tomato,
     borderRadius: 16,
     alignItems: 'center',
   },
   primaryButtonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '700',
+    fontFamily: 'KotraBold',
   },
   secondaryButton: {
     width: '100%',
     paddingVertical: 14,
-    backgroundColor: colors.muted,
+    backgroundColor: colors.cream,
     borderRadius: 16,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: colors.border,
     alignItems: 'center',
   },
   secondaryButtonText: {
     color: colors.foreground,
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'KotraGothic',
   },
   cancelText: {
     fontSize: 14,
+    fontFamily: 'KotraGothic',
     color: colors.mutedForeground,
     textAlign: 'center',
     marginTop: 4,
@@ -637,39 +757,44 @@ const addStyles = StyleSheet.create({
   },
   backText: {
     fontSize: 14,
+    fontFamily: 'KotraGothic',
     color: colors.mutedForeground,
   },
   formTitle: {
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'KotraBold',
     color: colors.foreground,
   },
   inputLabel: {
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: 'KotraGothic',
     color: colors.foreground,
   },
   input: {
     paddingHorizontal: 16,
     paddingVertical: 14,
-    borderRadius: 12,
-    backgroundColor: colors.muted,
+    borderRadius: 14,
+    backgroundColor: colors.cream,
+    borderWidth: 1.5,
+    borderColor: colors.border,
     fontSize: 14,
     color: colors.foreground,
   },
   inputCode: {
     paddingHorizontal: 16,
     paddingVertical: 14,
-    borderRadius: 12,
-    backgroundColor: colors.muted,
+    borderRadius: 14,
+    backgroundColor: colors.cream,
+    borderWidth: 1.5,
+    borderColor: colors.border,
     fontSize: 18,
-    fontWeight: '700',
+    fontFamily: 'Komputa-Bold',
     letterSpacing: 4,
     color: colors.foreground,
   },
   errorText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: 'KotraGothic',
     color: colors.destructive,
   },
 });
@@ -699,12 +824,20 @@ export function PeerAlertToast() {
 }
 
 export function PokeToast() {
-  const { pokeFrom, clearPoke } = useSocial();
+  const { pokeFrom, pokeFromId, pokeHasVoice, clearPoke } = useSocial();
 
   useEffect(() => {
     if (!pokeFrom) return;
     Vibration.vibrate([120, 60, 120, 60, 280]);
-    void playPokeSound();
+    if (pokeHasVoice && pokeFromId) {
+      api.getVoice(pokeFromId).then(({ audio }) => {
+        void playVoicePoke(audio);
+      }).catch(() => {
+        void playPokeSound();
+      });
+    } else {
+      void playPokeSound();
+    }
     const t = setTimeout(clearPoke, 7000);
     return () => clearTimeout(t);
   }, [pokeFrom, clearPoke]);
@@ -760,7 +893,7 @@ const toastStyles = StyleSheet.create({
   },
   peerText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'KotraBold',
     color: '#fff',
     flex: 1,
   },
@@ -795,7 +928,7 @@ const toastStyles = StyleSheet.create({
   },
   pokeName: {
     fontSize: 24,
-    fontWeight: '900',
+    fontFamily: 'KotraBold',
     color: '#fff',
     lineHeight: 32,
   },
@@ -845,8 +978,9 @@ export function SocialScreen() {
                   styles.teamTabText,
                   activeTeamCode === m.code && styles.teamTabTextActive,
                 ]}
+                numberOfLines={1}
               >
-                {m.code}
+                {m.teamName || m.code}
               </Text>
             </TouchableOpacity>
           ))}
@@ -885,8 +1019,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: 22,
+    fontFamily: 'KotraBold',
     color: colors.foreground,
   },
   teamTabs: {
@@ -901,17 +1035,19 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 12,
     backgroundColor: colors.muted,
+    maxWidth: 160,
   },
   teamTabActive: {
-    backgroundColor: colors.primary,
+    backgroundColor: colors.tomato,
   },
   teamTabText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'KotraGothic',
     color: colors.mutedForeground,
   },
   teamTabTextActive: {
     color: '#fff',
+    fontFamily: 'KotraBold',
   },
   addTabButton: {
     width: 36,

@@ -4,6 +4,7 @@ export interface SessionEvent {
   date: string;
   completedAt: number;
   type: 'work' | 'break';
+  durationMin?: number; // work duration in minutes (added v2)
 }
 
 export interface NowReaction {
@@ -50,6 +51,11 @@ export function addNowReaction(r: NowReaction): void {
 
 export function getNowReactions(): NowReaction[] {
   return load<NowReaction>(K_REACTIONS);
+}
+
+export function clearAllStats(): void {
+  save(K_SESSIONS, []);
+  save(K_REACTIONS, []);
 }
 
 function kstDateStr(d: Date): string {
@@ -108,10 +114,26 @@ export interface ReactionTier {
   label: string;
   grade: string;
   color: string;
+  description: string;
 }
 
 export function reactionTier(ms: number): ReactionTier {
-  if (ms < 10_000) return { label: '빠름', grade: '⚡', color: '#3b82f6' };
-  if (ms < 30_000) return { label: '보통', grade: '👍', color: '#16a34a' };
-  return { label: '느림', grade: '🐢', color: '#f97316' };
+  if (ms < 10_000) return { label: '빠름', grade: '⚡', color: '#3b82f6', description: '휴식과 작업을 미루지 않는 당신이 멋져요!' };
+  if (ms < 30_000) return { label: '보통', grade: '👍', color: '#16a34a', description: '미련 갖지 말고 일을 시작하고 휴식합시다!' };
+  return { label: '느림', grade: '🐢', color: '#f97316', description: '휴식도 일도 미루는 당신, 노력하세요!' };
+}
+
+/** Calculate total work minutes from sessions. Only counts sessions with durationMin recorded. */
+export function totalWorkMinutes(sessions: SessionEvent[]): number {
+  return sessions
+    .filter((s) => s.type === 'work' && s.durationMin != null)
+    .reduce((sum, s) => sum + s.durationMin!, 0);
+}
+
+export function lastNDaysFrom(n: number, baseDate: Date): string[] {
+  return Array.from({ length: n }, (_, i) => {
+    const d = new Date(baseDate);
+    d.setDate(d.getDate() - i);
+    return kstDateStr(d);
+  }).reverse();
 }

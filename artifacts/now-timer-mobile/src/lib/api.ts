@@ -19,6 +19,7 @@ export interface Member {
 export interface TeamData {
   id: string;
   code: string;
+  name: string;
   members: Record<string, Member>;
 }
 
@@ -45,8 +46,11 @@ async function request<T>(
 }
 
 export const api = {
-  createTeam(): Promise<{ code: string; teamId: string }> {
-    return request('POST', '/teams');
+  createTeam(name?: string): Promise<{ code: string; teamId: string; name: string }> {
+    return request('POST', '/teams', name ? { name } : undefined);
+  },
+  renameTeam(code: string, name: string, token: string): Promise<{ name: string }> {
+    return request('PATCH', `/teams/${code}`, { name }, token);
   },
   joinTeam(code: string, nickname: string): Promise<{ memberId: string; memberToken: string; team: TeamData }> {
     return request('POST', '/teams/join', { code, nickname });
