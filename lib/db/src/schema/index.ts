@@ -51,6 +51,8 @@ export const teamMembers = pgTable('team_members', {
   todayDate: text('today_date').notNull().default(''),
   avgReactionMs: integer('avg_reaction_ms').notNull().default(0),
   reactionCount: integer('reaction_count').notNull().default(0),
+  avatarData: text('avatar_data').default(''),
+  voicePoke: text('voice_poke').default(''),
 });
 
 export const memberTokens = pgTable('member_tokens', {

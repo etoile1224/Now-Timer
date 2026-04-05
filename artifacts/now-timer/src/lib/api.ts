@@ -9,6 +9,8 @@ export interface Member {
   todayDate?: string;
   avgReactionMs: number;
   reactionCount: number;
+  avatarData: string;
+  hasVoice: boolean;
 }
 
 export interface TeamData {
@@ -67,6 +69,18 @@ export const api = {
 
   poke(fromId: string, toId: string, token: string): Promise<void> {
     return request('POST', `/members/${fromId}/poke/${toId}`, undefined, token);
+  },
+
+  updateAvatar(memberId: string, avatarData: string, token: string): Promise<void> {
+    return request('PATCH', `/members/${memberId}`, { avatarData }, token);
+  },
+
+  uploadVoice(memberId: string, audio: string, token: string): Promise<void> {
+    return request('POST', `/members/${memberId}/voice`, { audio }, token);
+  },
+
+  getVoice(memberId: string): Promise<{ audio: string }> {
+    return request('GET', `/members/${memberId}/voice`);
   },
 
   getStats(

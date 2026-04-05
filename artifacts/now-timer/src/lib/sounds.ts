@@ -102,4 +102,12 @@ export function playPokeSound(): void {
   } catch {}
 }
 
+export function playVoicePoke(base64Audio: string): void {
+  try {
+    const audio = new Audio(`data:audio/webm;base64,${base64Audio}`);
+    audio.volume = 0.8;
+    audio.play().catch(() => {});
+  } catch {}
+}
+
 export type SoundType = 'ember';

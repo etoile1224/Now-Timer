@@ -27,6 +27,8 @@ interface SocialState {
   members: Record<string, Member>;
   allMembers: Record<string, Record<string, Member>>;
   pokeFrom: string | null;
+  pokeFromId: string | null;
+  pokeHasVoice: boolean;
   peerAlertMsg: string | null;
   clearPoke: () => void;
   clearPeerAlert: () => void;
@@ -70,6 +72,8 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
 
   const [allMembers, setAllMembers] = useState<Record<string, Record<string, Member>>>({});
   const [pokeFrom, setPokeFrom] = useState<string | null>(null);
+  const [pokeFromId, setPokeFromId] = useState<string | null>(null);
+  const [pokeHasVoice, setPokeHasVoice] = useState(false);
   const [peerAlertMsg, setPeerAlertMsg] = useState<string | null>(null);
 
   const esMap = useRef<Map<string, EventSource>>(new Map());
@@ -160,6 +164,8 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
             }));
           } else if (event.type === 'poke' && event.toMemberId === m.memberId) {
             setPokeFrom(event.fromNickname ?? '팀원');
+            setPokeFromId((event as { fromMemberId?: string }).fromMemberId ?? null);
+            setPokeHasVoice((event as { hasVoice?: boolean }).hasVoice ?? false);
           }
         } catch {}
       };
@@ -275,7 +281,11 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
     [activeTeamCode],
   );
 
-  const clearPoke = useCallback(() => setPokeFrom(null), []);
+  const clearPoke = useCallback(() => {
+    setPokeFrom(null);
+    setPokeFromId(null);
+    setPokeHasVoice(false);
+  }, []);
   const clearPeerAlert = useCallback(() => setPeerAlertMsg(null), []);
 
   const activeMembership = memberships.find((m) => m.code === activeTeamCode) ?? null;
@@ -292,6 +302,8 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
         members,
         allMembers,
         pokeFrom,
+        pokeFromId,
+        pokeHasVoice,
         peerAlertMsg,
         clearPoke,
         clearPeerAlert,
