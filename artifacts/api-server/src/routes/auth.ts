@@ -186,7 +186,22 @@ router.get('/auth/voice', async (req, res) => {
     res.status(401).json({ error: 'invalid_token' });
     return;
   }
-  const audio = await userStore.getVoice(payload.userId);
+  let audio = await userStore.getVoice(payload.userId);
+  // Fallback: migrate from legacy per-member voice_poke
+  if (!audio) {
+    const user = await userStore.getUser(payload.userId);
+    if (user) {
+      for (const m of user.memberships) {
+        const store = await import('../lib/teamStore.js');
+        const legacy = await store.getVoice(m.memberId);
+        if (legacy) {
+          audio = legacy;
+          await userStore.saveVoice(payload.userId, legacy);
+          break;
+        }
+      }
+    }
+  }
   if (!audio) {
     res.status(404).json({ error: 'No voice recording found' });
     return;
