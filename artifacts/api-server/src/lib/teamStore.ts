@@ -426,7 +426,10 @@ export async function getVoice(memberId: string): Promise<string | null> {
 export function pokeMember(fromId: string, toId: string): boolean {
   const from = getMember(fromId);
   const to = getMember(toId);
+  console.log(`[poke] fromId=${fromId} toId=${toId} from=${!!from} to=${!!to}`);
   if (!from || !to || from.team.code !== to.team.code) return false;
+
+  console.log(`[poke] ${from.member.nickname} → ${to.member.nickname} | pushToken=${to.member.pushToken ? 'YES' : 'NONE'} | sseClients=${clients(to.team.code).size}`);
 
   // Increment poke count for the sender
   from.member.pokeCount += 1;
@@ -461,7 +464,11 @@ async function sendPushNotification(
   body: string,
   data?: Record<string, unknown>,
 ): Promise<void> {
-  if (!pushToken || !pushToken.startsWith('ExponentPushToken')) return;
+  console.log(`[push] Sending to ${pushToken?.slice(0, 30)}... title="${title}"`);
+  if (!pushToken || !pushToken.startsWith('ExponentPushToken')) {
+    console.log('[push] SKIPPED — invalid token');
+    return;
+  }
   try {
     await fetch('https://exp.host/--/api/v2/push/send', {
       method: 'POST',
@@ -499,7 +506,11 @@ function sendPushToTeammates(
 
 export function registerPushToken(memberId: string, pushToken: string): boolean {
   const found = getMember(memberId);
-  if (!found) return false;
+  if (!found) {
+    console.log(`[push-reg] FAILED — member ${memberId} not found`);
+    return false;
+  }
+  console.log(`[push-reg] ${found.member.nickname} → ${pushToken.slice(0, 30)}...`);
   found.member.pushToken = pushToken;
   void db.run('UPDATE team_members SET push_token = $1 WHERE id = $2', [pushToken, memberId]);
   return true;
