@@ -3,8 +3,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useSearch } from 'wouter';
 import { QRCodeSVG } from 'qrcode.react';
 import { useSocial } from '@/context/SocialContext';
+import { api } from '@/lib/api';
 import type { Member } from '@/lib/api';
-import { playPokeSound } from '@/lib/sounds';
+import { playPokeSound, playVoicePoke } from '@/lib/sounds';
+import { PixelAvatar } from '@/components/PixelAvatar';
 import {
   Users,
   Copy,
@@ -70,9 +72,11 @@ function MemberCard({
         isMe ? 'border-primary bg-primary/5' : 'border-border bg-card'
       }`}
     >
-      <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-sm font-bold text-muted-foreground shrink-0">
-        {member.nickname.slice(0, 1).toUpperCase()}
-      </div>
+      <PixelAvatar
+        data={member.avatarData ? JSON.parse(member.avatarData) : null}
+        size={36}
+        fallbackLetter={member.nickname}
+      />
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
@@ -497,7 +501,7 @@ export function SocialPage() {
 }
 
 export function PokeToast() {
-  const { pokeFrom, clearPoke } = useSocial();
+  const { pokeFrom, pokeFromId, pokeHasVoice, clearPoke } = useSocial();
 
   useEffect(() => {
     if (!pokeFrom) return;
@@ -505,11 +509,24 @@ export function PokeToast() {
     if ('vibrate' in navigator) {
       navigator.vibrate([120, 60, 120, 60, 280]);
     }
-    playPokeSound();
+
+    if (pokeHasVoice && pokeFromId) {
+      api.getVoice(pokeFromId).then(({ audio }) => {
+        if (audio) {
+          playVoicePoke(audio);
+        } else {
+          playPokeSound();
+        }
+      }).catch(() => {
+        playPokeSound();
+      });
+    } else {
+      playPokeSound();
+    }
 
     const t = setTimeout(clearPoke, 7000);
     return () => clearTimeout(t);
-  }, [pokeFrom, clearPoke]);
+  }, [pokeFrom, pokeFromId, pokeHasVoice, clearPoke]);
 
   return (
     <AnimatePresence>

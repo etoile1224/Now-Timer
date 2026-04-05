@@ -46,11 +46,21 @@ router.patch('/members/:id', (req, res) => {
     return;
   }
 
-  const { status, ignoreLevel, reactionMs } = req.body as {
+  const { status, ignoreLevel, reactionMs, avatarData } = req.body as {
     status?: MemberStatus;
     ignoreLevel?: number;
     reactionMs?: number;
+    avatarData?: string;
   };
+
+  // Handle avatar update
+  if (avatarData !== undefined && !status) {
+    const result = store.updateAvatar(req.params.id, avatarData);
+    if (!result) { res.status(404).json({ error: 'Member not found' }); return; }
+    res.json({ member: result.member });
+    return;
+  }
+
   if (!status) {
     res.status(400).json({ error: 'status is required' });
     return;
@@ -76,6 +86,36 @@ router.post('/members/:fromId/poke/:toId', (req, res) => {
     return;
   }
   res.json({ ok: true });
+});
+
+router.post('/members/:id/voice', async (req, res) => {
+  const token = req.headers['x-member-token'] as string | undefined;
+  if (!token || !store.verifyToken(req.params.id, token)) {
+    res.status(401).json({ error: 'Invalid or missing member token' });
+    return;
+  }
+  const { audio } = req.body as { audio?: string };
+  if (!audio) {
+    res.status(400).json({ error: 'audio (base64) is required' });
+    return;
+  }
+  // Limit to ~200KB base64 (roughly 150KB audio)
+  if (audio.length > 200_000) {
+    res.status(413).json({ error: 'Audio too large (max 5 seconds)' });
+    return;
+  }
+  const ok = await store.saveVoice(req.params.id, audio);
+  if (!ok) { res.status(404).json({ error: 'Member not found' }); return; }
+  res.json({ ok: true });
+});
+
+router.get('/members/:id/voice', async (req, res) => {
+  const audio = await store.getVoice(req.params.id);
+  if (!audio) {
+    res.status(404).json({ error: 'No voice recording found' });
+    return;
+  }
+  res.json({ audio });
 });
 
 router.get('/teams/:code/stream', (req, res) => {

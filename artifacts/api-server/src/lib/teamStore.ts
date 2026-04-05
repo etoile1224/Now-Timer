@@ -30,6 +30,8 @@ export interface Member {
   todayDate: string;
   avgReactionMs: number;
   reactionCount: number;
+  avatarData: string;
+  hasVoice: boolean;
 }
 
 export interface TeamData {
@@ -73,6 +75,7 @@ export async function initTeams(): Promise<void> {
       id: string; team_code: string; nickname: string; status: string;
       ignore_level: number; now_count: number; dismissed_count: number;
       last_seen: string; today_date: string; avg_reaction_ms: number; reaction_count: number;
+      avatar_data: string; voice_poke: string;
     };
     type TokenRow = { token: string; member_id: string };
 
@@ -80,7 +83,8 @@ export async function initTeams(): Promise<void> {
       db.query<TeamRow>('SELECT id, code FROM teams'),
       db.query<MemberRow>(
         `SELECT id, team_code, nickname, status, ignore_level, now_count,
-                dismissed_count, last_seen, today_date, avg_reaction_ms, reaction_count
+                dismissed_count, last_seen, today_date, avg_reaction_ms, reaction_count,
+                avatar_data, voice_poke
          FROM team_members`,
       ),
       db.query<TokenRow>('SELECT token, member_id FROM member_tokens'),
@@ -103,6 +107,8 @@ export async function initTeams(): Promise<void> {
           todayDate: m.today_date,
           avgReactionMs: Number(m.avg_reaction_ms),
           reactionCount: Number(m.reaction_count),
+          avatarData: m.avatar_data || '',
+          hasVoice: !!m.voice_poke,
         };
       }
     }
@@ -136,6 +142,7 @@ async function loadTeamFromDb(upperCode: string): Promise<TeamData | null> {
     id: string; team_code: string; nickname: string; status: string;
     ignore_level: number; now_count: number; dismissed_count: number;
     last_seen: string; today_date: string; avg_reaction_ms: number; reaction_count: number;
+    avatar_data: string; voice_poke: string;
   };
   type TokenRow = { token: string; member_id: string };
 
@@ -150,7 +157,8 @@ async function loadTeamFromDb(upperCode: string): Promise<TeamData | null> {
   const [memberRows, tokenRows] = await Promise.all([
     db.query<MemberRow>(
       `SELECT id, team_code, nickname, status, ignore_level, now_count,
-              dismissed_count, last_seen, today_date, avg_reaction_ms, reaction_count
+              dismissed_count, last_seen, today_date, avg_reaction_ms, reaction_count,
+              avatar_data, voice_poke
        FROM team_members WHERE team_code = $1`,
       [upperCode],
     ),
@@ -167,6 +175,8 @@ async function loadTeamFromDb(upperCode: string): Promise<TeamData | null> {
       dismissedCount: Number(m.dismissed_count), lastSeen: m.last_seen,
       todayDate: m.today_date, avgReactionMs: Number(m.avg_reaction_ms),
       reactionCount: Number(m.reaction_count),
+      avatarData: m.avatar_data || '',
+      hasVoice: !!m.voice_poke,
     };
   }
   for (const t of tokenRows) {
@@ -200,6 +210,8 @@ export async function joinTeam(
     todayDate: todayKst(),
     avgReactionMs: 0,
     reactionCount: 0,
+    avatarData: '',
+    hasVoice: false,
   };
 
   const token = randomBytes(16).toString('hex');
@@ -311,6 +323,30 @@ export function updateStatus(
   return { team, member };
 }
 
+export function updateAvatar(memberId: string, avatarData: string): { team: TeamData; member: Member } | null {
+  const found = getMember(memberId);
+  if (!found) return null;
+  const { team, member } = found;
+  member.avatarData = avatarData;
+
+  void db.run('UPDATE team_members SET avatar_data = $1 WHERE id = $2', [avatarData, memberId]);
+  broadcast(team.code, { type: 'status', member: { ...member }, prevIgnoreLevel: member.ignoreLevel });
+  return { team, member };
+}
+
+export async function saveVoice(memberId: string, audioBase64: string): Promise<boolean> {
+  const found = getMember(memberId);
+  if (!found) return false;
+  found.member.hasVoice = true;
+  await db.run('UPDATE team_members SET voice_poke = $1 WHERE id = $2', [audioBase64, memberId]);
+  return true;
+}
+
+export async function getVoice(memberId: string): Promise<string | null> {
+  const row = await db.queryOne<{ voice_poke: string }>('SELECT voice_poke FROM team_members WHERE id = $1', [memberId]);
+  return row?.voice_poke || null;
+}
+
 export function pokeMember(fromId: string, toId: string): boolean {
   const from = getMember(fromId);
   const to = getMember(toId);
@@ -319,6 +355,8 @@ export function pokeMember(fromId: string, toId: string): boolean {
     type: 'poke',
     toMemberId: toId,
     fromNickname: from.member.nickname,
+    fromMemberId: fromId,
+    hasVoice: from.member.hasVoice,
   });
   return true;
 }

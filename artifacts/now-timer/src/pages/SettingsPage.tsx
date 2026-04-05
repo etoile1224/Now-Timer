@@ -1,7 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useTimer } from '@/context/TimerContext';
 import { useAuth } from '@/context/AuthContext';
+import { useSocial } from '@/context/SocialContext';
 import { previewSound } from '@/lib/sounds';
+import { api } from '@/lib/api';
+import { PixelEditor, createEmptyGrid } from '@/components/PixelEditor';
+import { PixelAvatar } from '@/components/PixelAvatar';
+import { VoiceRecorder } from '@/components/VoiceRecorder';
 import { Eye, EyeOff, Volume2, Check, FlaskConical, Play, Bell, BellOff, LogOut } from 'lucide-react';
 
 interface NumberInputProps {
@@ -152,6 +157,82 @@ function AccountSection() {
           로그아웃
         </button>
       </div>
+    </section>
+  );
+}
+
+const AVATAR_STORAGE_KEY = 'now-timer-avatar';
+const VOICE_STORAGE_KEY = 'now-timer-voice';
+
+function AvatarSection() {
+  const { user } = useAuth();
+  const { memberships, activeTeamCode, memberId } = useSocial();
+  const activeMembership = memberships.find((m) => m.code === activeTeamCode);
+
+  const [avatarGrid, setAvatarGrid] = useState<(string | null)[][]>(() => {
+    try {
+      const saved = localStorage.getItem(AVATAR_STORAGE_KEY);
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return createEmptyGrid();
+  });
+
+  const handleChange = (grid: (string | null)[][]) => {
+    setAvatarGrid(grid);
+    localStorage.setItem(AVATAR_STORAGE_KEY, JSON.stringify(grid));
+    // Sync to server if in a team
+    if (memberId && activeMembership) {
+      api.updateAvatar(memberId, JSON.stringify(grid), activeMembership.token).catch(() => {});
+    }
+  };
+
+  return (
+    <section className="bg-card rounded-2xl p-4 mb-4 shadow-sm border border-border">
+      <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+        프로필 아바타
+      </h2>
+      <div className="flex items-center gap-3 mb-4">
+        <PixelAvatar data={avatarGrid} size={48} fallbackLetter={user?.username} />
+        <div>
+          <p className="text-sm font-semibold text-foreground">{user?.username}</p>
+          <p className="text-xs text-muted-foreground">16x16 픽셀 아트로 나만의 아바타를 만들어 보세요</p>
+        </div>
+      </div>
+      <PixelEditor value={avatarGrid} onChange={handleChange} />
+    </section>
+  );
+}
+
+function VoicePokeSection() {
+  const { memberships, activeTeamCode, memberId } = useSocial();
+  const activeMembership = memberships.find((m) => m.code === activeTeamCode);
+
+  const [voiceBase64, setVoiceBase64] = useState<string | null>(() => {
+    return localStorage.getItem(VOICE_STORAGE_KEY);
+  });
+
+  const handleSave = (base64: string) => {
+    setVoiceBase64(base64);
+    localStorage.setItem(VOICE_STORAGE_KEY, base64);
+    if (memberId && activeMembership) {
+      api.uploadVoice(memberId, base64, activeMembership.token).catch(() => {});
+    }
+  };
+
+  const handleDelete = () => {
+    setVoiceBase64(null);
+    localStorage.removeItem(VOICE_STORAGE_KEY);
+    if (memberId && activeMembership) {
+      api.uploadVoice(memberId, '', activeMembership.token).catch(() => {});
+    }
+  };
+
+  return (
+    <section className="bg-card rounded-2xl p-4 mb-4 shadow-sm border border-border">
+      <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+        보이스 포크
+      </h2>
+      <VoiceRecorder audioBase64={voiceBase64} onSave={handleSave} onDelete={handleDelete} />
     </section>
   );
 }
@@ -364,6 +445,12 @@ export function SettingsPage() {
             </p>
           </div>
         </section>
+
+        {/* Profile Avatar section */}
+        <AvatarSection />
+
+        {/* Voice Poke section */}
+        <VoicePokeSection />
 
         {/* Escalation section */}
         <section className={`bg-card rounded-2xl p-4 mb-4 shadow-sm border border-border ${devMode ? 'opacity-50 pointer-events-none' : ''}`}>
