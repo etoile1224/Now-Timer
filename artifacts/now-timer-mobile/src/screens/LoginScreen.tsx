@@ -9,6 +9,7 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
+  ImageBackground,
 } from 'react-native';
 import { useAuth } from '@/context/AuthContext';
 import { colors } from '@/lib/colors';
@@ -33,7 +34,7 @@ export function LoginScreen() {
         await register(username.trim(), password);
       }
     } catch (err) {
-      setError((err as Error).message ?? '\uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC5B4\uC694');
+      setError((err as Error).message ?? '오류가 발생했어요');
     } finally {
       setLoading(false);
     }
@@ -48,82 +49,108 @@ export function LoginScreen() {
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Logo */}
-        <View style={styles.logoArea}>
-          <Text style={styles.logoText}>NOW!</Text>
-          <Text style={styles.tagline}>{'\uD300\uACFC \uD568\uAED8 \uC9D1\uC911\uD574\uC694'}</Text>
-        </View>
+        {/* Form — flat layout, no separate card */}
+        <View style={styles.formArea}>
+          <Text style={styles.title}>
+            {mode === 'login' ? '로그인' : '회원가입'}
+          </Text>
+          <Text style={styles.subtitle}>
+            {mode === 'login' ? '계정에 로그인하세요' : '새 계정을 만드세요'}
+          </Text>
 
-        {/* Mode toggle */}
-        <View style={styles.modeToggle}>
-          {(['login', 'register'] as Mode[]).map((m) => (
-            <TouchableOpacity
-              key={m}
-              onPress={() => { setMode(m); setError(null); }}
-              style={[styles.modeButton, mode === m && styles.modeButtonActive]}
+          {/* Mode toggle */}
+          <View style={styles.modeToggle}>
+            {(['login', 'register'] as Mode[]).map((m) => (
+              <TouchableOpacity
+                key={m}
+                onPress={() => { setMode(m); setError(null); }}
+                style={[styles.modeButton, mode === m && styles.modeButtonActive]}
+              >
+                <Text style={[styles.modeButtonText, mode === m && styles.modeButtonTextActive]}>
+                  {m === 'login' ? '로그인' : '회원가입'}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Form fields */}
+          <View style={styles.form}>
+            <Text style={styles.label}>{'아이디'}</Text>
+            <ImageBackground
+              source={require('@/../assets/images/input_field.png')}
+              style={styles.inputBg}
+              imageStyle={styles.inputBgImage}
+              resizeMode="cover"
             >
-              <Text style={[styles.modeButtonText, mode === m && styles.modeButtonTextActive]}>
-                {m === 'login' ? '\uB85C\uADF8\uC778' : '\uD68C\uC6D0\uAC00\uC785'}
+              <TextInput
+                style={styles.input}
+                value={username}
+                onChangeText={setUsername}
+                placeholder="2~20자"
+                placeholderTextColor={colors.mutedForeground}
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+            </ImageBackground>
+
+            <Text style={[styles.label, { marginTop: 12 }]}>{'비밀번호'}</Text>
+            <ImageBackground
+              source={require('@/../assets/images/input_field.png')}
+              style={styles.inputBg}
+              imageStyle={styles.inputBgImage}
+              resizeMode="cover"
+            >
+              <TextInput
+                style={styles.input}
+                value={password}
+                onChangeText={setPassword}
+                placeholder={mode === 'register' ? '6자 이상' : ''}
+                placeholderTextColor={colors.mutedForeground}
+                secureTextEntry
+              />
+            </ImageBackground>
+
+            {error && (
+              <Text style={styles.errorText}>{error}</Text>
+            )}
+
+            {/* Submit button */}
+            <TouchableOpacity
+              style={[styles.submitWrap, loading && { opacity: 0.5 }]}
+              onPress={handleSubmit}
+              disabled={loading}
+              activeOpacity={0.8}
+            >
+              <ImageBackground
+                source={require('@/../assets/images/btn_login.png')}
+                style={styles.submitBg}
+                imageStyle={styles.submitBgImage}
+                resizeMode="cover"
+              >
+                {loading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.submitText}>
+                    {mode === 'login' ? '로그인' : '시작하기'}
+                  </Text>
+                )}
+              </ImageBackground>
+            </TouchableOpacity>
+          </View>
+
+          {/* Switch mode */}
+          <View style={styles.switchRow}>
+            <Text style={styles.switchText}>
+              {mode === 'login' ? '계정이 없으신가요? ' : '이미 계정이 있으신가요? '}
+            </Text>
+            <TouchableOpacity
+              onPress={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(null); }}
+            >
+              <Text style={styles.switchLink}>
+                {mode === 'login' ? '회원가입' : '로그인'}
               </Text>
             </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* Form */}
-        <View style={styles.form}>
-          <Text style={styles.label}>{'\uC544\uC774\uB514'}</Text>
-          <TextInput
-            style={styles.input}
-            value={username}
-            onChangeText={setUsername}
-            placeholder="2~20\uC790"
-            placeholderTextColor={colors.mutedForeground}
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-
-          <Text style={[styles.label, { marginTop: 12 }]}>{'\uBE44\uBC00\uBC88\uD638'}</Text>
-          <TextInput
-            style={styles.input}
-            value={password}
-            onChangeText={setPassword}
-            placeholder={mode === 'register' ? '6\uC790 \uC774\uC0C1' : ''}
-            placeholderTextColor={colors.mutedForeground}
-            secureTextEntry
-          />
-
-          {error && (
-            <Text style={styles.errorText}>{error}</Text>
-          )}
-
-          <TouchableOpacity
-            style={[styles.submitButton, loading && styles.submitButtonDisabled]}
-            onPress={handleSubmit}
-            disabled={loading}
-            activeOpacity={0.8}
-          >
-            {loading ? (
-              <ActivityIndicator color={colors.primaryForeground} />
-            ) : (
-              <Text style={styles.submitButtonText}>
-                {mode === 'login' ? '\uB85C\uADF8\uC778' : '\uC2DC\uC791\uD558\uAE30'}
-              </Text>
-            )}
-          </TouchableOpacity>
-        </View>
-
-        {/* Switch mode text */}
-        <View style={styles.switchRow}>
-          <Text style={styles.switchText}>
-            {mode === 'login' ? '\uACC4\uC815\uC774 \uC5C6\uC73C\uC2E0\uAC00\uC694? ' : '\uC774\uBBF8 \uACC4\uC815\uC774 \uC788\uC73C\uC2E0\uAC00\uC694? '}
-          </Text>
-          <TouchableOpacity
-            onPress={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(null); }}
-          >
-            <Text style={styles.switchLink}>
-              {mode === 'login' ? '\uD68C\uC6D0\uAC00\uC785' : '\uB85C\uADF8\uC778'}
-            </Text>
-          </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -133,97 +160,104 @@ export function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: colors.cream,
   },
   scrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 48,
+    paddingHorizontal: 28,
+    paddingVertical: 40,
   },
-  logoArea: {
-    alignItems: 'center',
-    marginBottom: 40,
+  formArea: {
   },
-  logoText: {
-    fontSize: 64,
-    fontWeight: '900',
+  title: {
+    fontSize: 26,
+    fontFamily: 'KotraBold',
     color: colors.foreground,
-    letterSpacing: -2,
   },
-  tagline: {
-    fontSize: 14,
+  subtitle: {
+    fontSize: 13,
+    fontFamily: 'KotraGothic',
     color: colors.mutedForeground,
-    marginTop: 4,
+    marginTop: 2,
+    marginBottom: 16,
   },
   modeToggle: {
     flexDirection: 'row',
     backgroundColor: colors.muted,
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 4,
-    marginBottom: 24,
+    marginBottom: 16,
+    borderWidth: 1.5,
+    borderColor: colors.border,
   },
   modeButton: {
     flex: 1,
     paddingVertical: 10,
-    borderRadius: 10,
+    borderRadius: 12,
     alignItems: 'center',
   },
   modeButtonActive: {
     backgroundColor: colors.background,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.08,
-    shadowRadius: 2,
-    elevation: 2,
   },
   modeButtonText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'KotraGothic',
     color: colors.mutedForeground,
   },
   modeButtonTextActive: {
     color: colors.foreground,
+    fontFamily: 'KotraBold',
   },
   form: {
-    marginBottom: 24,
+    marginBottom: 16,
   },
   label: {
-    fontSize: 12,
-    fontWeight: '500',
-    color: colors.mutedForeground,
-    marginBottom: 6,
+    fontSize: 13,
+    fontFamily: 'KotraGothic',
+    color: colors.foreground,
+    marginBottom: 4,
+    marginLeft: 4,
+  },
+  inputBg: {
+    height: 44,
+    justifyContent: 'center',
+    overflow: 'hidden',
+    borderRadius: 14,
+  },
+  inputBgImage: {
+    borderRadius: 14,
   },
   input: {
-    backgroundColor: colors.background,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 14,
+    paddingVertical: 10,
+    fontSize: 15,
     color: colors.foreground,
   },
   errorText: {
-    fontSize: 14,
+    fontSize: 13,
+    fontFamily: 'KotraGothic',
     color: colors.destructive,
     textAlign: 'center',
     marginTop: 12,
   },
-  submitButton: {
-    backgroundColor: colors.foreground,
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
+  submitWrap: {
     marginTop: 16,
+    borderRadius: 14,
+    overflow: 'hidden',
   },
-  submitButtonDisabled: {
-    opacity: 0.5,
+  submitBg: {
+    height: 46,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  submitButtonText: {
-    color: colors.background,
-    fontSize: 15,
-    fontWeight: '700',
+  submitBgImage: {
+    borderRadius: 14,
+  },
+  submitText: {
+    color: '#fff',
+    fontSize: 16,
+    fontFamily: 'KotraBold',
   },
   switchRow: {
     flexDirection: 'row',
@@ -231,13 +265,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   switchText: {
-    fontSize: 12,
+    fontSize: 13,
+    fontFamily: 'KotraGothic',
     color: colors.mutedForeground,
   },
   switchLink: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.foreground,
+    fontSize: 13,
+    fontFamily: 'KotraBold',
+    color: colors.tomato,
     textDecorationLine: 'underline',
   },
 });

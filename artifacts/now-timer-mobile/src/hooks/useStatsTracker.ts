@@ -16,7 +16,7 @@ interface UseStatsTrackerOptions {
 }
 
 export function useStatsTracker(opts?: UseStatsTrackerOptions) {
-  const { phase, ignoreLevel } = useTimer();
+  const { phase, ignoreLevel, settings, devMode } = useTimer();
   const prevPhaseRef = useRef(phase);
   const prevIgnoreLevelRef = useRef(ignoreLevel);
   const alertStartRef = useRef<number | null>(null);
@@ -40,7 +40,8 @@ export function useStatsTracker(opts?: UseStatsTrackerOptions) {
 
     if (workDone) {
       const date = todayStr();
-      addSession({ date, completedAt: Date.now(), type: 'work' });
+      const durationMin = devMode ? 5 / 60 : settings.workDuration;
+      addSession({ date, completedAt: Date.now(), type: 'work', durationMin });
 
       if (alertStartRef.current !== null) {
         const alertedAt = alertStartRef.current;

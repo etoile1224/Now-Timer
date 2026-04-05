@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ActivityIndicator, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform, Image } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Timer, Users, BarChart2, Settings } from 'lucide-react-native';
+import { useFonts } from 'expo-font';
 import { initStorage } from '@/lib/storage';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { TimerProvider, useTimer } from '@/context/TimerContext';
@@ -42,7 +43,7 @@ function MainTabs() {
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: colors.primary,
+        tabBarActiveTintColor: colors.tomato,
         tabBarInactiveTintColor: colors.mutedForeground,
         tabBarStyle: {
           backgroundColor: colors.background,
@@ -53,7 +54,7 @@ function MainTabs() {
         },
         tabBarLabelStyle: {
           fontSize: 11,
-          fontWeight: '600',
+          fontFamily: 'KotraGothic',
         },
       }}
     >
@@ -61,7 +62,7 @@ function MainTabs() {
         name="Focus"
         component={FocusScreen}
         options={{
-          tabBarLabel: '\uBAB0\uC785',
+          tabBarLabel: '몰입',
           tabBarIcon: ({ color, size }) => <Timer size={size} color={color} />,
         }}
       />
@@ -69,7 +70,7 @@ function MainTabs() {
         name="Social"
         component={SocialScreen}
         options={{
-          tabBarLabel: '\uC18C\uC15C',
+          tabBarLabel: '소셜',
           tabBarIcon: ({ color, size }) => <Users size={size} color={color} />,
         }}
       />
@@ -77,7 +78,7 @@ function MainTabs() {
         name="Stats"
         component={StatsScreen}
         options={{
-          tabBarLabel: '\uD1B5\uACC4',
+          tabBarLabel: '통계',
           tabBarIcon: ({ color, size }) => <BarChart2 size={size} color={color} />,
         }}
       />
@@ -85,7 +86,7 @@ function MainTabs() {
         name="Settings"
         component={SettingsScreen}
         options={{
-          tabBarLabel: '\uC124\uC815',
+          tabBarLabel: '설정',
           tabBarIcon: ({ color, size }) => <Settings size={size} color={color} />,
         }}
       />
@@ -99,7 +100,11 @@ function AppContent() {
   if (isLoading) {
     return (
       <View style={styles.splash}>
-        <Text style={styles.splashText}>NOW!</Text>
+        <Image
+          source={require('@/../assets/images/splash_logo.png')}
+          style={styles.splashLogo}
+          resizeMode="contain"
+        />
       </View>
     );
   }
@@ -125,18 +130,32 @@ function AppContent() {
 
 export default function App() {
   const [storageReady, setStorageReady] = useState(false);
+  const [splashDone, setSplashDone] = useState(false);
+
+  const [fontsLoaded] = useFonts({
+    'KotraBold': require('@/../assets/fonts/KOTRA_BOLD.ttf'),
+    'KotraGothic': require('@/../assets/fonts/KOTRA_GOTHIC.ttf'),
+    'Komputa-Bold': require('@/../assets/fonts/Komputa-Bold.ttf'),
+    'Komputa-Light': require('@/../assets/fonts/Komputa-Light.ttf'),
+    'Komputa-Regular': require('@/../assets/fonts/Komputa-Regular.ttf'),
+  });
 
   useEffect(() => {
     initStorage().then(() => setStorageReady(true));
   }, []);
 
-  if (!storageReady) {
+  useEffect(() => {
+    const timer = setTimeout(() => setSplashDone(true), 1800);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (!storageReady || !fontsLoaded || !splashDone) {
     return (
       <View style={styles.splash}>
-        <Text style={styles.splashText}>NOW!</Text>
-        <ActivityIndicator
-          color={colors.primary}
-          style={{ marginTop: 16 }}
+        <Image
+          source={require('@/../assets/images/splash_logo.png')}
+          style={styles.splashLogo}
+          resizeMode="contain"
         />
       </View>
     );
@@ -154,14 +173,12 @@ export default function App() {
 const styles = StyleSheet.create({
   splash: {
     flex: 1,
-    backgroundColor: colors.background,
+    backgroundColor: '#ffffff',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  splashText: {
-    fontSize: 48,
-    fontWeight: '900',
-    color: colors.foreground,
-    letterSpacing: -2,
+  splashLogo: {
+    width: 220,
+    height: 280,
   },
 });

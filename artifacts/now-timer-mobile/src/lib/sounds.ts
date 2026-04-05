@@ -91,4 +91,21 @@ export async function playPokeSound(): Promise<void> {
   } catch {}
 }
 
+export async function playVoicePoke(base64Audio: string): Promise<void> {
+  try {
+    const { sound } = await Audio.Sound.createAsync(
+      { uri: `data:audio/webm;base64,${base64Audio}` },
+      { shouldPlay: true, volume: 0.8 }
+    );
+    sound.setOnPlaybackStatusUpdate((status) => {
+      if ('didJustFinish' in status && status.didJustFinish) {
+        sound.unloadAsync();
+      }
+    });
+  } catch {
+    // Fallback to default poke sound
+    await playPokeSound();
+  }
+}
+
 export type SoundType = 'ember';

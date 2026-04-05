@@ -5,8 +5,21 @@ import {
   TouchableOpacity,
   StyleSheet,
   Modal,
+  Image,
+  Dimensions,
 } from 'react-native';
 import { useTimer } from '@/context/TimerContext';
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+// Tomato images for escalation — one tomato added per level
+const TOMATO_IMAGES = [
+  require('@/../assets/images/tomato1.png'),
+  require('@/../assets/images/tomato2.png'),
+  require('@/../assets/images/tomato3.png'),
+  require('@/../assets/images/tomato4.png'),
+  require('@/../assets/images/tomato5.png'),
+];
 
 interface LevelConfig {
   bgColor: string;
@@ -14,7 +27,6 @@ interface LevelConfig {
   badgeBorder: string;
   badgeText: string;
   label: string;
-  nowText: string;
   showSnooze: boolean;
 }
 
@@ -25,8 +37,7 @@ function getLv(level: number): LevelConfig {
       badgeBg: 'rgba(253,224,71,0.8)',
       badgeBorder: '#fef08a',
       badgeText: '#713f12',
-      label: '\uCCAB \uBC88\uC9F8 \uC54C\uB9BC',
-      nowText: 'NOW!',
+      label: '첫 번째 알림',
       showSnooze: true,
     };
   }
@@ -36,8 +47,7 @@ function getLv(level: number): LevelConfig {
       badgeBg: 'rgba(251,146,60,0.8)',
       badgeBorder: '#fdba74',
       badgeText: '#ffffff',
-      label: '\uBB34\uC2DC\uD558\uB294 \uC911...',
-      nowText: 'NOW!!',
+      label: '무시하는 중...',
       showSnooze: true,
     };
   }
@@ -46,12 +56,12 @@ function getLv(level: number): LevelConfig {
     badgeBg: 'rgba(239,68,68,0.8)',
     badgeBorder: '#fca5a5',
     badgeText: '#ffffff',
-    label: '\uC9C0\uAE08 \uB2F9\uC7A5\uC694!!',
-    nowText: 'NOW!!!!!!!',
+    label: '지금 당장요!!',
     showSnooze: false,
   };
 }
 
+// Escalation bar — shows how many times user has ignored
 function EscalationBar({
   remainingSeconds,
   totalSeconds,
@@ -67,8 +77,8 @@ function EscalationBar({
   return (
     <View style={escalationStyles.container}>
       <View style={escalationStyles.headerRow}>
-        <Text style={escalationStyles.headerLabel}>{'\uBB34\uC2DC \uB85C\uADF8'}</Text>
-        <Text style={escalationStyles.headerCount}>{level}{'\uD68C'}</Text>
+        <Text style={escalationStyles.headerLabel}>{'무시 로그'}</Text>
+        <Text style={escalationStyles.headerCount}>{level}{'회'}</Text>
       </View>
       <View style={escalationStyles.dotsRow}>
         {Array.from({ length: Math.min(level, 12) }).map((_, i) => (
@@ -98,7 +108,7 @@ function EscalationBar({
             />
           </View>
           <Text style={escalationStyles.countdownText}>
-            {remainingSeconds}{'\uCD08 \uD6C4 Lv.'}{level + 1}
+            {remainingSeconds}{'초 후 Lv.'}{level + 1}
           </Text>
         </>
       )}
@@ -118,12 +128,12 @@ const escalationStyles = StyleSheet.create({
   },
   headerLabel: {
     fontSize: 11,
-    fontWeight: '500',
+    fontFamily: 'KotraGothic',
     color: 'rgba(255,255,255,0.5)',
   },
   headerCount: {
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: 'KotraBold',
     color: 'rgba(255,255,255,0.6)',
   },
   dotsRow: {
@@ -136,7 +146,7 @@ const escalationStyles = StyleSheet.create({
   },
   overflow: {
     fontSize: 11,
-    fontWeight: '700',
+    fontFamily: 'KotraBold',
     color: 'rgba(255,255,255,0.6)',
   },
   progressTrack: {
@@ -159,6 +169,80 @@ const escalationStyles = StyleSheet.create({
   },
 });
 
+// Cooking tomatoes — number of tomatoes = level (frying pan with tomatoes)
+function CookingTomatoes({ level }: { level: number }) {
+  const tomatoCount = Math.min(level, 5);
+  // Layout positions for tomatoes on the frying pan
+  // Arranged to look like they're being cooked
+  // Pan circle: center ~(52%, 37%), radius ~30%
+  // Usable area: left 22%-82%, top 7%-67%
+  // Positions are top-left corner of each tomato
+  const positions: { top: number; left: number; size: number; rotate: string }[] = [
+    // 1st — center-left
+    { top: 0.28, left: 0.36, size: 0.28, rotate: '-5deg' },
+    // 2nd — center-right
+    { top: 0.18, left: 0.58, size: 0.26, rotate: '12deg' },
+    // 3rd — top center
+    { top: 0.08, left: 0.44, size: 0.26, rotate: '-8deg' },
+    // 4th — bottom center
+    { top: 0.42, left: 0.46, size: 0.24, rotate: '8deg' },
+    // 5th — bottom right
+    { top: 0.36, left: 0.64, size: 0.24, rotate: '-10deg' },
+  ];
+
+  const panSize = SCREEN_WIDTH * 0.85;
+
+  return (
+    <View style={[cookingStyles.container, { width: panSize, height: panSize }]}>
+      {/* Frying pan background */}
+      <Image
+        source={require('@/../assets/images/frypan.png')}
+        style={cookingStyles.frypan}
+        resizeMode="contain"
+      />
+      {/* Tomatoes on the pan — count increases with level */}
+      {positions.slice(0, tomatoCount).map((pos, i) => {
+        const tomatoSize = panSize * pos.size;
+        return (
+          <Image
+            key={i}
+            source={TOMATO_IMAGES[i % TOMATO_IMAGES.length]}
+            style={[
+              cookingStyles.tomato,
+              {
+                width: tomatoSize,
+                height: tomatoSize,
+                top: panSize * pos.top,
+                left: panSize * pos.left,
+                transform: [{ rotate: pos.rotate }],
+              },
+            ]}
+            resizeMode="contain"
+          />
+        );
+      })}
+
+    </View>
+  );
+}
+
+const cookingStyles = StyleSheet.create({
+  container: {
+    position: 'relative',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  frypan: {
+    width: '100%',
+    height: '100%',
+    position: 'absolute',
+  },
+  tomato: {
+    position: 'absolute',
+  },
+});
+
 interface NowAlertOverlayProps {
   type: 'work' | 'return';
 }
@@ -174,12 +258,15 @@ export function NowAlertOverlay({ type }: NowAlertOverlayProps) {
 
   const subText = isWork
     ? isLongBreak
-      ? '\uAE34 \uD734\uC2DD \uC2DC\uAC04\uC774\uC5D0\uC694!'
-      : '\uC274 \uC2DC\uAC04\uC774\uC5D0\uC694'
-    : '\uB2E4\uC2DC \uC9D1\uC911\uD560 \uC2DC\uAC04\uC774\uC5D0\uC694!';
+      ? '긴 휴식 시간이에요!'
+      : '쉴 시간이에요'
+    : '다시 집중할 시간이에요!';
 
-  const dismissLabel = isWork ? '\uD655\uC778 \u2014 \uC274\uB7EC \uAC08\uAC8C\uC694' : '\uD655\uC778 \u2014 \uC9D1\uC911 \uC2DC\uC791';
-  const snoozeLabel = devMode ? '5\uCD08 \uB354...' : '5\uBD84 \uB354...';
+  const dismissLabel = isWork ? '확인 — 쉬러 갈게요' : '확인 — 집중 시작';
+  const snoozeLabel = devMode ? '5초 더...' : '5분 더...';
+
+  // Generate NOW! text — more exclamation marks with higher level
+  const nowExclamation = level <= 1 ? '!' : level === 2 ? '!!' : '!!!!!!!';
 
   return (
     <Modal
@@ -189,6 +276,26 @@ export function NowAlertOverlay({ type }: NowAlertOverlayProps) {
       statusBarTranslucent
     >
       <View style={[styles.overlay, { backgroundColor: lv.bgColor }]}>
+        {/* Spaghetti noodle background — diagonal across screen */}
+        <Image
+          source={require('@/../assets/images/spaghetti2.png')}
+          style={styles.spaghettiBg}
+          resizeMode="contain"
+        />
+
+        {/* Cooking tomatoes area — tomatoes increase with level */}
+        <View style={styles.cookingArea}>
+          <CookingTomatoes level={level} />
+        </View>
+
+        {/* NOW! text overlaid on the cooking area */}
+        <View style={styles.nowTextContainer}>
+          <Text style={styles.nowText}>
+            {'NOW'}{nowExclamation}
+          </Text>
+        </View>
+
+        {/* Content overlaid on bottom */}
         <View style={styles.content}>
           {/* Level badge */}
           <View
@@ -205,13 +312,14 @@ export function NowAlertOverlay({ type }: NowAlertOverlayProps) {
             </Text>
           </View>
 
-          {/* NOW! text */}
-          <Text style={[styles.nowText, level >= 3 && styles.nowTextLv3]}>
-            {lv.nowText}
-          </Text>
-
           {/* Sub text */}
           <Text style={styles.subText}>{subText}</Text>
+
+          {/* Tomato count hint */}
+          <Text style={styles.tomatoCountHint}>
+            {'🍅'}{' '}{Math.min(level, 5)}{'개 조리 중'}
+            {level > 5 ? ` (+${level - 5}개 대기)` : ''}
+          </Text>
 
           {/* Escalation bar */}
           <EscalationBar
@@ -233,7 +341,7 @@ export function NowAlertOverlay({ type }: NowAlertOverlayProps) {
                   { color: level >= 3 ? '#b91c1c' : '#111827' },
                 ]}
               >
-                {'\u2713 '}{dismissLabel}
+                {'✓ '}{dismissLabel}
               </Text>
             </TouchableOpacity>
 
@@ -251,12 +359,12 @@ export function NowAlertOverlay({ type }: NowAlertOverlayProps) {
           {/* Footer hint */}
           {level < 3 && (
             <Text style={styles.footerHint}>
-              {'\uBB34\uC2DC\uD560\uC218\uB85D Lv.\uC774 \uC62C\uB77C\uAC00\uC694'}
+              {'무시할수록 토마토가 늘어나요 🍅'}
             </Text>
           )}
           {level >= 3 && (
             <Text style={styles.footerHintStrong}>
-              {'\uC2A4\uB204\uC988 \uBD88\uAC00 \u2014 \uC9C0\uAE08 \uBC14\uB85C \uD655\uC778\uD558\uC138\uC694!'}
+              {'프라이팬이 꽉 찼어요! 지금 바로 확인하세요!'}
             </Text>
           )}
         </View>
@@ -268,15 +376,46 @@ export function NowAlertOverlay({ type }: NowAlertOverlayProps) {
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  spaghettiBg: {
+    position: 'absolute',
+    width: SCREEN_WIDTH * 1.2,
+    height: SCREEN_HEIGHT * 0.7,
+    top: -SCREEN_HEIGHT * 0.05,
+    left: -SCREEN_WIDTH * 0.3,
+    opacity: 0.3,
+  },
+  cookingArea: {
+    width: '100%',
+    height: SCREEN_HEIGHT * 0.42,
     alignItems: 'center',
+    justifyContent: 'center',
+  },
+  nowTextContainer: {
+    position: 'absolute',
+    top: SCREEN_HEIGHT * 0.34,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  nowText: {
+    fontFamily: 'KotraBold',
+    fontSize: 52,
+    color: '#ffffff',
+    textShadowColor: 'rgba(0,0,0,0.4)',
+    textShadowOffset: { width: 0, height: 3 },
+    textShadowRadius: 8,
+    letterSpacing: 2,
   },
   content: {
+    flex: 1,
     alignItems: 'center',
-    gap: 20,
+    justifyContent: 'center',
+    gap: 12,
     paddingHorizontal: 32,
     width: '100%',
-    maxWidth: 360,
   },
   badge: {
     flexDirection: 'row',
@@ -289,30 +428,23 @@ const styles = StyleSheet.create({
   },
   badgeLvText: {
     fontSize: 13,
-    fontWeight: '900',
+    fontFamily: 'KotraBold',
     letterSpacing: 2,
   },
   badgeLabelText: {
     fontSize: 13,
-    fontWeight: '500',
+    fontFamily: 'KotraGothic',
     opacity: 0.8,
-  },
-  nowText: {
-    fontSize: 80,
-    fontWeight: '900',
-    color: '#ffffff',
-    letterSpacing: -2,
-    textShadowColor: 'rgba(0,0,0,0.15)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 8,
-  },
-  nowTextLv3: {
-    fontSize: 60,
   },
   subText: {
     fontSize: 20,
-    fontWeight: '600',
+    fontFamily: 'KotraGothic',
     color: 'rgba(255,255,255,0.9)',
+  },
+  tomatoCountHint: {
+    fontSize: 14,
+    fontFamily: 'KotraGothic',
+    color: 'rgba(255,255,255,0.7)',
   },
   buttonsContainer: {
     width: '100%',
@@ -334,7 +466,7 @@ const styles = StyleSheet.create({
   },
   dismissButtonText: {
     fontSize: 17,
-    fontWeight: '700',
+    fontFamily: 'KotraBold',
   },
   snoozeButton: {
     width: '100%',
@@ -348,16 +480,17 @@ const styles = StyleSheet.create({
   },
   snoozeButtonText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'KotraGothic',
     color: '#ffffff',
   },
   footerHint: {
     fontSize: 12,
+    fontFamily: 'KotraGothic',
     color: 'rgba(255,255,255,0.45)',
   },
   footerHintStrong: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'KotraBold',
     color: 'rgba(255,255,255,0.6)',
   },
 });

@@ -7,6 +7,7 @@ import React, {
   useState,
 } from 'react';
 import { Vibration } from 'react-native';
+import * as Notifications from 'expo-notifications';
 import { useTimer } from '@/context/TimerContext';
 import { useAuth } from '@/context/AuthContext';
 import EventSource from 'react-native-sse';
@@ -220,6 +221,30 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
       cancelMap.current.clear();
     };
   }, [memberships]);
+
+  // Push notification listener — handles poke when SSE is disconnected or app is in background
+  useEffect(() => {
+    const sub = Notifications.addNotificationReceivedListener((notification) => {
+      const data = notification.request.content.data as { type?: string; fromNickname?: string; fromId?: string } | undefined;
+      if (data?.type === 'poke') {
+        setPokeFrom(data.fromNickname ?? '팀원');
+        setPokeFromId(data.fromId ?? null);
+        setPokeHasVoice(false);
+      }
+    });
+    const responseSub = Notifications.addNotificationResponseReceivedListener((response) => {
+      const data = response.notification.request.content.data as { type?: string; fromNickname?: string; fromId?: string } | undefined;
+      if (data?.type === 'poke') {
+        setPokeFrom(data.fromNickname ?? '팀원');
+        setPokeFromId(data.fromId ?? null);
+        setPokeHasVoice(false);
+      }
+    });
+    return () => {
+      sub.remove();
+      responseSub.remove();
+    };
+  }, []);
 
   useEffect(() => {
     const prevPhase = prevPhaseForApiRef.current;

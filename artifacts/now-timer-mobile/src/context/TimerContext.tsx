@@ -6,6 +6,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
+import { Vibration } from 'react-native';
 import { loadSettings, saveSettings, type TimerSettings } from '@/lib/timerSettings';
 import { playAlert, stopAlert } from '@/lib/sounds';
 
@@ -121,6 +122,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
           ignoreLevelRef.current = 1;
           setIgnoreLevel(1);
           void playAlert(settings.soundType, settings.soundVolume, 1);
+          Vibration.vibrate(500);
           const nextEnd = Date.now() + escalationSeconds() * 1000;
           setEndTimeMs(nextEnd);
           setTotalSeconds(escalationSeconds());
@@ -131,6 +133,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
           ignoreLevelRef.current = 1;
           setIgnoreLevel(1);
           void playAlert(settings.soundType, settings.soundVolume, 1);
+          Vibration.vibrate(500);
           const nextEnd = Date.now() + escalationSeconds() * 1000;
           setEndTimeMs(nextEnd);
           setTotalSeconds(escalationSeconds());
@@ -142,6 +145,12 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
           setIgnoreLevel(ignoreLevelRef.current);
           const soundLevel = Math.min(3, ignoreLevelRef.current);
           void playAlert(settings.soundType, settings.soundVolume, soundLevel);
+          // 레벨 올라갈수록 진동 강하게
+          if (soundLevel >= 3) {
+            Vibration.vibrate([0, 300, 100, 300, 100, 500]);
+          } else {
+            Vibration.vibrate([0, 200, 100, 400]);
+          }
           const nextEnd = Date.now() + escalationSeconds() * 1000;
           setEndTimeMs(nextEnd);
           setTotalSeconds(escalationSeconds());

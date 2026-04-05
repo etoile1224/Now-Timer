@@ -16,7 +16,9 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.nowtimer.app",
       "infoPlist": {
-        "UIBackgroundModes": ["audio"]
+        "UIBackgroundModes": [
+          "audio"
+        ]
       }
     },
     "android": {
@@ -27,7 +29,8 @@
       "package": "com.nowtimer.app"
     },
     "plugins": [
-      "expo-notifications"
+      "expo-notifications",
+      "expo-font"
     ]
   }
 }

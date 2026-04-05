@@ -10,7 +10,6 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useSocial } from '@/context/SocialContext';
-import { useTimer } from '@/context/TimerContext';
 import { api } from '@/lib/api';
 import {
   getSessions,
@@ -22,7 +21,6 @@ import {
   reactionTier,
   todayStr,
   totalWorkMinutes,
-  clearAllStats,
   type SessionEvent,
   type NowReaction,
 } from '@/lib/statsStorage';
@@ -75,15 +73,13 @@ const TOMATO_IMAGES = [
 
 function DailySessionRow({
   data,
-  workDuration,
 }: {
-  data: { label: string; count: number }[];
-  workDuration: number;
+  data: { label: string; count: number; minutes: number }[];
 }) {
   return (
     <View style={chartStyles.container}>
       {data.map((d, i) => {
-        const minutes = d.count * workDuration;
+        const mins = Math.round(d.minutes);
         return (
           <View key={i} style={chartStyles.dayRow}>
             <Text style={chartStyles.dayLabel}>{d.label}</Text>
@@ -105,7 +101,7 @@ function DailySessionRow({
               )}
             </View>
             <Text style={chartStyles.dayStat}>
-              {d.count > 0 ? `${minutes}분 / ${d.count}세션` : ''}
+              {d.count > 0 ? `${mins}분 / ${d.count}세션` : ''}
             </Text>
           </View>
         );
@@ -131,16 +127,11 @@ export function StatsScreen() {
   const [period, setPeriod] = useState<Period>('week');
   const [refreshKey, setRefreshKey] = useState(0);
   const { memberships, allMembers, memberId, activeTeamCode } = useSocial();
-  const { settings } = useTimer();
   const insets = useSafeAreaInsets();
 
   const [backendStats, setBackendStats] = useState<BackendStats | null>(null);
   const [backendLoading, setBackendLoading] = useState(false);
 
-  const handleReset = () => {
-    clearAllStats();
-    setRefreshKey((k) => k + 1);
-  };
 
   const activeMembership = useMemo(
     () => memberships.find((m) => m.code === activeTeamCode) ?? null,
@@ -198,21 +189,27 @@ export function StatsScreen() {
     const serverDaily = backendStats?.daily;
     if (serverDaily && serverDaily.length > 0) {
       return serverDaily.map((d) => ({
-        date: d.date, label: dateLabel(d.date), count: d.sessions, compRate: d.complianceRate,
+        date: d.date, label: dateLabel(d.date), count: d.sessions, minutes: 0, compRate: d.complianceRate,
       }));
     }
     if (period === 'today') {
       const today = todayStr();
-      const count = filteredSessions.filter((s) => s.date === today).length;
-      return [{ date: today, label: '오늘', count, compRate: localCompliance }];
+      const todaySessions = workSessions.filter((s) => s.date === today);
+      const count = todaySessions.length;
+      const minutes = todaySessions.reduce((sum, s) => sum + (s.durationMin ?? 0), 0);
+      return [{ date: today, label: '오늘', count, minutes, compRate: localCompliance }];
     }
     const days = lastNDays(periodDays);
     const countMap = new Map<string, number>();
+    const minMap = new Map<string, number>();
     for (const s of workSessions) {
-      if (days.includes(s.date)) countMap.set(s.date, (countMap.get(s.date) ?? 0) + 1);
+      if (days.includes(s.date)) {
+        countMap.set(s.date, (countMap.get(s.date) ?? 0) + 1);
+        minMap.set(s.date, (minMap.get(s.date) ?? 0) + (s.durationMin ?? 0));
+      }
     }
-    return days.map((d) => ({ date: d, label: dateLabel(d), count: countMap.get(d) ?? 0, compRate: null as number | null }));
-  }, [backendStats, period, filteredSessions, workSessions, localCompliance, periodDays]);
+    return days.map((d) => ({ date: d, label: dateLabel(d), count: countMap.get(d) ?? 0, minutes: minMap.get(d) ?? 0, compRate: null as number | null }));
+  }, [backendStats, period, workSessions, localCompliance, periodDays]);
 
   // ── Team leaderboard ──
   const prevRanksRef = useRef<Map<string, number>>(new Map());
@@ -336,7 +333,7 @@ export function StatsScreen() {
             )}
           </Text>
         </View>
-        <DailySessionRow data={barData} workDuration={settings.workDuration} />
+        <DailySessionRow data={barData} />
       </View>
 
       {/* ═══════════════════════════════════ */}
@@ -524,10 +521,6 @@ export function StatsScreen() {
         </View>
       ))}
 
-      {/* Reset */}
-      <TouchableOpacity onPress={handleReset} style={styles.resetButton}>
-        <Text style={styles.resetText}>{'통계 초기화'}</Text>
-      </TouchableOpacity>
     </ScrollView>
   );
 }
@@ -765,17 +758,5 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: 'KotraGothic',
     color: colors.mutedForeground,
-  },
-  resetButton: {
-    alignSelf: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    marginTop: 8,
-  },
-  resetText: {
-    fontSize: 12,
-    fontFamily: 'KotraGothic',
-    color: colors.mutedForeground,
-    textDecorationLine: 'underline',
   },
 });
