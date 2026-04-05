@@ -108,7 +108,7 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
 
     function doConnect() {
       const url = `${API_BASE_URL}/api/teams/${m.code}/stream?memberId=${m.memberId}`;
-      const es = new EventSource(url);
+      const es = new EventSource(url, { lineEndingCharacter: '\n' });
 
       es.addEventListener('message', (evt: { data?: string }) => {
         if (!evt.data) return;
