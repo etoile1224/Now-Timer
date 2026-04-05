@@ -423,11 +423,23 @@ export async function getVoice(memberId: string): Promise<string | null> {
   return legacy?.voice_poke || null;
 }
 
+const pokeCooldowns = new Map<string, number>();
+
 export function pokeMember(fromId: string, toId: string): boolean {
   const from = getMember(fromId);
   const to = getMember(toId);
   console.log(`[poke] fromId=${fromId} toId=${toId} from=${!!from} to=${!!to}`);
   if (!from || !to || from.team.code !== to.team.code) return false;
+
+  // 10초 쿨다운
+  const cooldownKey = `${fromId}→${toId}`;
+  const now = Date.now();
+  const lastPoke = pokeCooldowns.get(cooldownKey) ?? 0;
+  if (now - lastPoke < 10_000) {
+    console.log(`[poke] COOLDOWN — ${from.member.nickname} → ${to.member.nickname} (${Math.round((10000 - (now - lastPoke)) / 1000)}s left)`);
+    return true; // 성공으로 리턴하되 실제 전송 안 함
+  }
+  pokeCooldowns.set(cooldownKey, now);
 
   console.log(`[poke] ${from.member.nickname} → ${to.member.nickname} | pushToken=${to.member.pushToken ? 'YES' : 'NONE'} | sseClients=${clients(to.team.code).size}`);
 

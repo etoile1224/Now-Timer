@@ -843,31 +843,28 @@ export function PokeToast() {
     } else {
       void playPokeSound();
     }
-    const t = setTimeout(clearPoke, 7000);
+    const t = setTimeout(clearPoke, 4000);
     return () => clearTimeout(t);
   }, [pokeFrom, clearPoke]);
 
   if (!pokeFrom) return null;
 
   return (
-    <Modal visible transparent animationType="fade" statusBarTranslucent>
+    <View style={toastStyles.pokeBanner} pointerEvents="box-none">
       <TouchableOpacity
-        style={toastStyles.pokeOverlay}
-        activeOpacity={1}
         onPress={clearPoke}
+        style={toastStyles.pokeCard}
+        activeOpacity={0.9}
       >
-        <View style={toastStyles.pokeCard}>
-          <Text style={toastStyles.pokeEmoji}>{'\uD83D\uDC4A'}</Text>
-          <Text style={toastStyles.pokeName}>
-            {pokeFrom}{pokeParticle(pokeFrom)}
-          </Text>
-          <Text style={toastStyles.pokeName}>
-            {'\uC7AC\uCD09\uD569\uB2C8\uB2E4!'}
+        <Text style={toastStyles.pokeEmoji}>{'\uD83D\uDC4A'}</Text>
+        <View style={toastStyles.pokeTextWrap}>
+          <Text style={toastStyles.pokeName} numberOfLines={1}>
+            {pokeFrom}{pokeParticle(pokeFrom)} {'\uC7AC\uCD09\uD569\uB2C8\uB2E4!'}
           </Text>
           <Text style={toastStyles.pokeDismiss}>{'\uD0ED\uD574\uC11C \uB2EB\uAE30'}</Text>
         </View>
       </TouchableOpacity>
-    </Modal>
+    </View>
   );
 }
 
@@ -906,40 +903,47 @@ const toastStyles = StyleSheet.create({
     fontSize: 14,
     marginLeft: 4,
   },
-  pokeOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    justifyContent: 'center',
+  pokeBanner: {
+    position: 'absolute',
+    top: 60,
+    left: 0,
+    right: 0,
     alignItems: 'center',
-    paddingHorizontal: 32,
+    zIndex: 9999,
+    elevation: 9999,
+    paddingHorizontal: 16,
   },
   pokeCard: {
-    backgroundColor: '#f97316',
-    borderRadius: 24,
-    padding: 28,
+    flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#f97316',
+    borderRadius: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     width: '100%',
-    maxWidth: 300,
+    maxWidth: 360,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 10,
+    gap: 14,
   },
   pokeEmoji: {
-    fontSize: 48,
-    marginBottom: 16,
+    fontSize: 32,
+  },
+  pokeTextWrap: {
+    flex: 1,
   },
   pokeName: {
-    fontSize: 24,
+    fontSize: 18,
     fontFamily: 'KotraBold',
     color: '#fff',
-    lineHeight: 32,
   },
   pokeDismiss: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.7)',
-    marginTop: 16,
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.6)',
+    marginTop: 2,
   },
 });
 
