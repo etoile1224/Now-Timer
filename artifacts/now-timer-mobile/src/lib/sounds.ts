@@ -94,7 +94,7 @@ export async function playPokeSound(): Promise<void> {
 export async function playVoicePoke(base64Audio: string): Promise<void> {
   try {
     const { sound } = await Audio.Sound.createAsync(
-      { uri: `data:audio/webm;base64,${base64Audio}` },
+      { uri: `data:audio/m4a;base64,${base64Audio}` },
       { shouldPlay: true, volume: 0.8 }
     );
     sound.setOnPlaybackStatusUpdate((status) => {
