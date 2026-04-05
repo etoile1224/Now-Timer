@@ -71,6 +71,10 @@ function broadcast(code: string, payload: Record<string, unknown>): void {
   }
 }
 
+export function broadcastMemberStatus(teamCode: string, member: Member): void {
+  broadcast(teamCode, { type: 'status', member: { ...member } });
+}
+
 export async function initTeams(): Promise<void> {
   try {
     type TeamRow = { id: string; code: string; name: string };
@@ -85,17 +89,20 @@ export async function initTeams(): Promise<void> {
     // Ensure columns exist (migration for existing DBs)
     await db.run("ALTER TABLE teams ADD COLUMN IF NOT EXISTS name TEXT NOT NULL DEFAULT ''").catch(() => {});
     await db.run("ALTER TABLE team_members ADD COLUMN IF NOT EXISTS poke_count INTEGER NOT NULL DEFAULT 0").catch(() => {});
+    await db.run("ALTER TABLE users ADD COLUMN IF NOT EXISTS voice_poke TEXT DEFAULT ''").catch(() => {});
 
     const [teamRows, memberRows, tokenRows] = await Promise.all([
       db.query<TeamRow>('SELECT id, code, name FROM teams'),
       db.query<MemberRow>(
-        `SELECT id, team_code, nickname, status, ignore_level, now_count,
-                dismissed_count, last_seen, today_date, avg_reaction_ms, reaction_count,
-                (voice_poke IS NOT NULL AND voice_poke != '') AS has_voice,
-                COALESCE(push_token, '') AS push_token,
-                COALESCE(avatar_data, '') AS avatar_data,
-                COALESCE(poke_count, 0) AS poke_count
-         FROM team_members`,
+        `SELECT tm.id, tm.team_code, tm.nickname, tm.status, tm.ignore_level, tm.now_count,
+                tm.dismissed_count, tm.last_seen, tm.today_date, tm.avg_reaction_ms, tm.reaction_count,
+                ((tm.voice_poke IS NOT NULL AND tm.voice_poke != '') OR
+                 EXISTS(SELECT 1 FROM user_memberships um JOIN users u ON u.id = um.user_id
+                        WHERE um.member_id = tm.id AND u.voice_poke IS NOT NULL AND u.voice_poke != '')) AS has_voice,
+                COALESCE(tm.push_token, '') AS push_token,
+                COALESCE(tm.avatar_data, '') AS avatar_data,
+                COALESCE(tm.poke_count, 0) AS poke_count
+         FROM team_members tm`,
       ),
       db.query<TokenRow>('SELECT token, member_id FROM member_tokens'),
     ]);
@@ -178,13 +185,15 @@ async function loadTeamFromDb(upperCode: string): Promise<TeamData | null> {
 
   const [memberRows, tokenRows] = await Promise.all([
     db.query<MemberRow>(
-      `SELECT id, team_code, nickname, status, ignore_level, now_count,
-              dismissed_count, last_seen, today_date, avg_reaction_ms, reaction_count,
-              (voice_poke IS NOT NULL AND voice_poke != '') AS has_voice,
-              COALESCE(push_token, '') AS push_token,
-              COALESCE(avatar_data, '') AS avatar_data,
-              COALESCE(poke_count, 0) AS poke_count
-       FROM team_members WHERE team_code = $1`,
+      `SELECT tm.id, tm.team_code, tm.nickname, tm.status, tm.ignore_level, tm.now_count,
+              tm.dismissed_count, tm.last_seen, tm.today_date, tm.avg_reaction_ms, tm.reaction_count,
+              ((tm.voice_poke IS NOT NULL AND tm.voice_poke != '') OR
+               EXISTS(SELECT 1 FROM user_memberships um JOIN users u ON u.id = um.user_id
+                      WHERE um.member_id = tm.id AND u.voice_poke IS NOT NULL AND u.voice_poke != '')) AS has_voice,
+              COALESCE(tm.push_token, '') AS push_token,
+              COALESCE(tm.avatar_data, '') AS avatar_data,
+              COALESCE(tm.poke_count, 0) AS poke_count
+       FROM team_members tm WHERE tm.team_code = $1`,
       [upperCode],
     ),
     db.query<TokenRow>(
@@ -398,8 +407,20 @@ export async function saveVoice(memberId: string, audioBase64: string): Promise<
 }
 
 export async function getVoice(memberId: string): Promise<string | null> {
-  const row = await db.queryOne<{ voice_poke: string }>('SELECT voice_poke FROM team_members WHERE id = $1', [memberId]);
-  return row?.voice_poke || null;
+  // Look up user-level voice first (via user_memberships → users)
+  const row = await db.queryOne<{ voice_poke: string }>(
+    `SELECT u.voice_poke FROM users u
+     JOIN user_memberships um ON um.user_id = u.id
+     WHERE um.member_id = $1 AND u.voice_poke IS NOT NULL AND u.voice_poke != ''`,
+    [memberId],
+  );
+  if (row?.voice_poke) return row.voice_poke;
+  // Fallback: legacy per-member voice
+  const legacy = await db.queryOne<{ voice_poke: string }>(
+    'SELECT voice_poke FROM team_members WHERE id = $1',
+    [memberId],
+  );
+  return legacy?.voice_poke || null;
 }
 
 export function pokeMember(fromId: string, toId: string): boolean {

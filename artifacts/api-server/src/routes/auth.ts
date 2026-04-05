@@ -107,4 +107,91 @@ router.delete('/auth/link-membership/:code', async (req, res) => {
   res.json({ ok: true });
 });
 
+// Voice poke — per-user (account)
+router.post('/auth/voice', async (req, res) => {
+  const header = req.headers['authorization'];
+  if (!header?.startsWith('Bearer ')) {
+    res.status(401).json({ error: 'unauthorized' });
+    return;
+  }
+  const payload = jwt.verifyToken(header.slice(7));
+  if (!payload) {
+    res.status(401).json({ error: 'invalid_token' });
+    return;
+  }
+  const { audio } = req.body as { audio?: string };
+  if (!audio) {
+    res.status(400).json({ error: 'audio (base64) is required' });
+    return;
+  }
+  if (audio.length > 200_000) {
+    res.status(413).json({ error: 'Audio too large (max 5 seconds)' });
+    return;
+  }
+  await userStore.saveVoice(payload.userId, audio);
+
+  // Update hasVoice flag on all team members linked to this user
+  const user = await userStore.getUser(payload.userId);
+  if (user) {
+    const store = await import('../lib/teamStore.js');
+    for (const m of user.memberships) {
+      const found = store.getMember(m.memberId);
+      if (found) {
+        found.member.hasVoice = true;
+        store.broadcastMemberStatus(found.team.code, found.member);
+      }
+    }
+  }
+
+  res.json({ ok: true });
+});
+
+router.delete('/auth/voice', async (req, res) => {
+  const header = req.headers['authorization'];
+  if (!header?.startsWith('Bearer ')) {
+    res.status(401).json({ error: 'unauthorized' });
+    return;
+  }
+  const payload = jwt.verifyToken(header.slice(7));
+  if (!payload) {
+    res.status(401).json({ error: 'invalid_token' });
+    return;
+  }
+  await userStore.saveVoice(payload.userId, '');
+
+  // Clear hasVoice on all team members
+  const user = await userStore.getUser(payload.userId);
+  if (user) {
+    const store = await import('../lib/teamStore.js');
+    for (const m of user.memberships) {
+      const found = store.getMember(m.memberId);
+      if (found) {
+        found.member.hasVoice = false;
+        store.broadcastMemberStatus(found.team.code, found.member);
+      }
+    }
+  }
+
+  res.json({ ok: true });
+});
+
+router.get('/auth/voice', async (req, res) => {
+  const header = req.headers['authorization'];
+  if (!header?.startsWith('Bearer ')) {
+    res.status(401).json({ error: 'unauthorized' });
+    return;
+  }
+  const payload = jwt.verifyToken(header.slice(7));
+  if (!payload) {
+    res.status(401).json({ error: 'invalid_token' });
+    return;
+  }
+  const audio = await userStore.getVoice(payload.userId);
+  if (!audio) {
+    res.status(404).json({ error: 'No voice recording found' });
+    return;
+  }
+  res.json({ audio });
+});
+
 export default router;

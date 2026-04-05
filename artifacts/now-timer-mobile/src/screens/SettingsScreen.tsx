@@ -184,7 +184,7 @@ function AvatarSection() {
 }
 
 function VoicePokeSection() {
-  const { memberships } = useSocial();
+  const { authToken } = useAuth();
   const [audioBase64, setAudioBase64] = useState<string | null>(null);
 
   useEffect(() => {
@@ -196,15 +196,18 @@ function VoicePokeSection() {
   const handleSave = useCallback(async (base64: string) => {
     setAudioBase64(base64);
     await AsyncStorage.setItem(VOICE_KEY, base64);
-    for (const m of memberships) {
-      api.uploadVoice(m.memberId, base64, m.token).catch(() => {});
+    if (authToken) {
+      api.uploadUserVoice(authToken, base64).catch(() => {});
     }
-  }, [memberships]);
+  }, [authToken]);
 
   const handleDelete = useCallback(async () => {
     setAudioBase64(null);
     await AsyncStorage.removeItem(VOICE_KEY);
-  }, []);
+    if (authToken) {
+      api.deleteUserVoice(authToken).catch(() => {});
+    }
+  }, [authToken]);
 
   return (
     <View style={styles.card}>

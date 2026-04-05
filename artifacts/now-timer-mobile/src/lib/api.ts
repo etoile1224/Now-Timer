@@ -46,6 +46,29 @@ async function request<T>(
   return res.json() as Promise<T>;
 }
 
+async function authRequest<T>(
+  method: string,
+  path: string,
+  authToken: string,
+  body?: unknown,
+): Promise<T> {
+  const headers: Record<string, string> = {
+    'Authorization': `Bearer ${authToken}`,
+  };
+  if (body) headers['Content-Type'] = 'application/json';
+
+  const res = await fetch(`${API_BASE_URL}/api${path}`, {
+    method,
+    headers,
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => res.status.toString());
+    throw new Error(`${method} /api${path} failed: ${text}`);
+  }
+  return res.json() as Promise<T>;
+}
+
 export const api = {
   createTeam(name?: string): Promise<{ code: string; teamId: string; name: string }> {
     return request('POST', '/teams', name ? { name } : undefined);
@@ -76,6 +99,13 @@ export const api = {
   },
   getVoice(memberId: string): Promise<{ audio: string }> {
     return request('GET', `/members/${memberId}/voice`);
+  },
+  // Account-level voice (per user, not per member)
+  uploadUserVoice(authToken: string, audio: string): Promise<void> {
+    return authRequest('POST', '/auth/voice', authToken, { audio });
+  },
+  deleteUserVoice(authToken: string): Promise<void> {
+    return authRequest('DELETE', '/auth/voice', authToken);
   },
   registerPushToken(memberId: string, pushToken: string, token: string): Promise<void> {
     return request('POST', `/members/${memberId}/push-token`, { pushToken }, token);

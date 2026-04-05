@@ -131,3 +131,26 @@ export async function unlinkMembership(
     [userId, code],
   );
 }
+
+export async function saveVoice(userId: string, audio: string): Promise<void> {
+  await db.run(
+    'UPDATE users SET voice_poke = $1 WHERE id = $2',
+    [audio, userId],
+  );
+}
+
+export async function getVoice(userId: string): Promise<string | null> {
+  const row = await db.queryOne<{ voice_poke: string }>(
+    'SELECT voice_poke FROM users WHERE id = $1',
+    [userId],
+  );
+  return row?.voice_poke || null;
+}
+
+export async function getUserIdByMemberId(memberId: string): Promise<string | null> {
+  const row = await db.queryOne<{ user_id: string }>(
+    'SELECT user_id FROM user_memberships WHERE member_id = $1',
+    [memberId],
+  );
+  return row?.user_id || null;
+}
