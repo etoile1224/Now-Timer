@@ -4,9 +4,10 @@ import type { MemberStatus } from '../lib/teamStore';
 
 const router = Router();
 
-router.post('/teams', async (_req, res) => {
-  const team = await store.createTeam();
-  res.status(201).json({ code: team.code, teamId: team.id });
+router.post('/teams', async (req, res) => {
+  const { name } = (req.body ?? {}) as { name?: string };
+  const team = await store.createTeam(name);
+  res.status(201).json({ code: team.code, teamId: team.id, name: team.name });
 });
 
 router.post('/teams/join', async (req, res) => {
@@ -37,6 +38,21 @@ router.get('/teams/:code', (req, res) => {
     return;
   }
   res.json({ team });
+});
+
+router.patch('/teams/:code', (req, res) => {
+  const token = req.headers['x-member-token'] as string | undefined;
+  // Verify caller is a member of this team
+  const team = store.getTeam(req.params.code);
+  if (!team) { res.status(404).json({ error: 'Team not found' }); return; }
+  const callerOk = token && Object.keys(team.members).some((mid) => store.verifyToken(mid, token));
+  if (!callerOk) { res.status(401).json({ error: 'Unauthorized' }); return; }
+
+  const { name } = req.body as { name?: string };
+  if (name === undefined) { res.status(400).json({ error: 'name is required' }); return; }
+  const updated = store.renameTeam(req.params.code, name);
+  if (!updated) { res.status(404).json({ error: 'Team not found' }); return; }
+  res.json({ name: updated.name });
 });
 
 router.patch('/members/:id', (req, res) => {

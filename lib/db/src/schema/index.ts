@@ -34,6 +34,7 @@ export const teams = pgTable(
   {
     id: text('id').primaryKey(),
     code: text('code').notNull(),
+    name: text('name').notNull().default(''),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [unique('teams_code_key').on(t.code)],

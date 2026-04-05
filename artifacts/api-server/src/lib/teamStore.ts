@@ -38,6 +38,7 @@ export interface Member {
 export interface TeamData {
   id: string;
   code: string;
+  name: string;
   members: Record<string, Member>;
 }
 
@@ -71,7 +72,7 @@ function broadcast(code: string, payload: Record<string, unknown>): void {
 
 export async function initTeams(): Promise<void> {
   try {
-    type TeamRow = { id: string; code: string };
+    type TeamRow = { id: string; code: string; name: string };
     type MemberRow = {
       id: string; team_code: string; nickname: string; status: string;
       ignore_level: number; now_count: number; dismissed_count: number;
@@ -80,8 +81,11 @@ export async function initTeams(): Promise<void> {
     };
     type TokenRow = { token: string; member_id: string };
 
+    // Ensure name column exists (migration for existing DBs)
+    await db.run("ALTER TABLE teams ADD COLUMN IF NOT EXISTS name TEXT NOT NULL DEFAULT ''").catch(() => {});
+
     const [teamRows, memberRows, tokenRows] = await Promise.all([
-      db.query<TeamRow>('SELECT id, code FROM teams'),
+      db.query<TeamRow>('SELECT id, code, name FROM teams'),
       db.query<MemberRow>(
         `SELECT id, team_code, nickname, status, ignore_level, now_count,
                 dismissed_count, last_seen, today_date, avg_reaction_ms, reaction_count,
@@ -92,7 +96,7 @@ export async function initTeams(): Promise<void> {
     ]);
 
     for (const t of teamRows) {
-      teams.set(t.code, { id: t.id, code: t.code, members: {} });
+      teams.set(t.code, { id: t.id, code: t.code, name: t.name || '', members: {} });
     }
     for (const m of memberRows) {
       const team = teams.get(m.team_code);
@@ -124,13 +128,23 @@ export async function initTeams(): Promise<void> {
   }
 }
 
-export async function createTeam(): Promise<TeamData> {
+export async function createTeam(name?: string): Promise<TeamData> {
   let code: string;
   do { code = genCode(); } while (teams.has(code));
   const id = genId();
-  const team: TeamData = { id, code, members: {} };
+  const teamName = name?.trim() || '';
+  const team: TeamData = { id, code, name: teamName, members: {} };
   teams.set(code, team);
-  await db.run('INSERT INTO teams (id, code) VALUES ($1, $2)', [id, code]);
+  await db.run('INSERT INTO teams (id, code, name) VALUES ($1, $2, $3)', [id, code, teamName]);
+  return team;
+}
+
+export function renameTeam(code: string, name: string): TeamData | null {
+  const team = teams.get(code.toUpperCase());
+  if (!team) return null;
+  team.name = name.slice(0, 30);
+  void db.run('UPDATE teams SET name = $1 WHERE code = $2', [team.name, team.code]);
+  broadcast(team.code, { type: 'teamRename', name: team.name });
   return team;
 }
 
@@ -139,7 +153,7 @@ export function getTeam(code: string): TeamData | undefined {
 }
 
 async function loadTeamFromDb(upperCode: string): Promise<TeamData | null> {
-  type TeamRow = { id: string; code: string };
+  type TeamRow = { id: string; code: string; name: string };
   type MemberRow = {
     id: string; team_code: string; nickname: string; status: string;
     ignore_level: number; now_count: number; dismissed_count: number;
@@ -149,12 +163,12 @@ async function loadTeamFromDb(upperCode: string): Promise<TeamData | null> {
   type TokenRow = { token: string; member_id: string };
 
   const teamRow = await db.queryOne<TeamRow>(
-    'SELECT id, code FROM teams WHERE code = $1',
+    'SELECT id, code, name FROM teams WHERE code = $1',
     [upperCode],
   );
   if (!teamRow) return null;
 
-  const team: TeamData = { id: teamRow.id, code: teamRow.code, members: {} };
+  const team: TeamData = { id: teamRow.id, code: teamRow.code, name: teamRow.name || '', members: {} };
 
   const [memberRows, tokenRows] = await Promise.all([
     db.query<MemberRow>(

@@ -21,9 +21,13 @@ CREATE TABLE IF NOT EXISTS user_memberships (
 CREATE TABLE IF NOT EXISTS teams (
   id TEXT PRIMARY KEY,
   code TEXT NOT NULL,
+  name TEXT NOT NULL DEFAULT '',
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (code)
 );
+
+-- Migration: add name column if missing (for existing DBs)
+ALTER TABLE teams ADD COLUMN IF NOT EXISTS name TEXT NOT NULL DEFAULT '';
 
 CREATE TABLE IF NOT EXISTS team_members (
   id TEXT PRIMARY KEY,
