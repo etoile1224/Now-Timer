@@ -88,6 +88,11 @@ router.post('/members/:fromId/poke/:toId', (req, res) => {
   res.json({ ok: true });
 });
 
+router.get('/members/:id/avatar', async (req, res) => {
+  const avatarData = await store.getAvatar(req.params.id);
+  res.json({ avatarData: avatarData ?? '' });
+});
+
 router.post('/members/:id/voice', async (req, res) => {
   const token = req.headers['x-member-token'] as string | undefined;
   if (!token || !store.verifyToken(req.params.id, token)) {

@@ -75,7 +75,7 @@ export async function initTeams(): Promise<void> {
       id: string; team_code: string; nickname: string; status: string;
       ignore_level: number; now_count: number; dismissed_count: number;
       last_seen: string; today_date: string; avg_reaction_ms: number; reaction_count: number;
-      avatar_data: string; voice_poke: string;
+      has_voice: boolean;
     };
     type TokenRow = { token: string; member_id: string };
 
@@ -84,7 +84,7 @@ export async function initTeams(): Promise<void> {
       db.query<MemberRow>(
         `SELECT id, team_code, nickname, status, ignore_level, now_count,
                 dismissed_count, last_seen, today_date, avg_reaction_ms, reaction_count,
-                avatar_data, voice_poke
+                (voice_poke IS NOT NULL AND voice_poke != '') AS has_voice
          FROM team_members`,
       ),
       db.query<TokenRow>('SELECT token, member_id FROM member_tokens'),
@@ -107,8 +107,8 @@ export async function initTeams(): Promise<void> {
           todayDate: m.today_date,
           avgReactionMs: Number(m.avg_reaction_ms),
           reactionCount: Number(m.reaction_count),
-          avatarData: m.avatar_data || '',
-          hasVoice: !!m.voice_poke,
+          avatarData: '',
+          hasVoice: !!m.has_voice,
         };
       }
     }
@@ -142,7 +142,7 @@ async function loadTeamFromDb(upperCode: string): Promise<TeamData | null> {
     id: string; team_code: string; nickname: string; status: string;
     ignore_level: number; now_count: number; dismissed_count: number;
     last_seen: string; today_date: string; avg_reaction_ms: number; reaction_count: number;
-    avatar_data: string; voice_poke: string;
+    has_voice: boolean;
   };
   type TokenRow = { token: string; member_id: string };
 
@@ -158,7 +158,7 @@ async function loadTeamFromDb(upperCode: string): Promise<TeamData | null> {
     db.query<MemberRow>(
       `SELECT id, team_code, nickname, status, ignore_level, now_count,
               dismissed_count, last_seen, today_date, avg_reaction_ms, reaction_count,
-              avatar_data, voice_poke
+              (voice_poke IS NOT NULL AND voice_poke != '') AS has_voice
        FROM team_members WHERE team_code = $1`,
       [upperCode],
     ),
@@ -175,8 +175,8 @@ async function loadTeamFromDb(upperCode: string): Promise<TeamData | null> {
       dismissedCount: Number(m.dismissed_count), lastSeen: m.last_seen,
       todayDate: m.today_date, avgReactionMs: Number(m.avg_reaction_ms),
       reactionCount: Number(m.reaction_count),
-      avatarData: m.avatar_data || '',
-      hasVoice: !!m.voice_poke,
+      avatarData: '',
+      hasVoice: !!m.has_voice,
     };
   }
   for (const t of tokenRows) {
@@ -330,14 +330,20 @@ export function updateAvatar(memberId: string, avatarData: string): { team: Team
   member.avatarData = avatarData;
 
   void db.run('UPDATE team_members SET avatar_data = $1 WHERE id = $2', [avatarData, memberId]);
-  broadcast(team.code, { type: 'status', member: { ...member }, prevIgnoreLevel: member.ignoreLevel });
+  // Separate event type — avatar changes are infrequent, no need to send full member object
+  broadcast(team.code, { type: 'avatar', memberId, avatarData });
   return { team, member };
+}
+
+export async function getAvatar(memberId: string): Promise<string | null> {
+  const row = await db.queryOne<{ avatar_data: string }>('SELECT avatar_data FROM team_members WHERE id = $1', [memberId]);
+  return row?.avatar_data || null;
 }
 
 export async function saveVoice(memberId: string, audioBase64: string): Promise<boolean> {
   const found = getMember(memberId);
   if (!found) return false;
-  found.member.hasVoice = true;
+  found.member.hasVoice = !!audioBase64;
   await db.run('UPDATE team_members SET voice_poke = $1 WHERE id = $2', [audioBase64, memberId]);
   return true;
 }
