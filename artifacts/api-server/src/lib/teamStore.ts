@@ -77,7 +77,7 @@ export async function initTeams(): Promise<void> {
       id: string; team_code: string; nickname: string; status: string;
       ignore_level: number; now_count: number; dismissed_count: number;
       last_seen: string; today_date: string; avg_reaction_ms: number; reaction_count: number;
-      has_voice: boolean; push_token: string;
+      has_voice: boolean; push_token: string; avatar_data: string;
     };
     type TokenRow = { token: string; member_id: string };
 
@@ -90,7 +90,8 @@ export async function initTeams(): Promise<void> {
         `SELECT id, team_code, nickname, status, ignore_level, now_count,
                 dismissed_count, last_seen, today_date, avg_reaction_ms, reaction_count,
                 (voice_poke IS NOT NULL AND voice_poke != '') AS has_voice,
-                COALESCE(push_token, '') AS push_token
+                COALESCE(push_token, '') AS push_token,
+                COALESCE(avatar_data, '') AS avatar_data
          FROM team_members`,
       ),
       db.query<TokenRow>('SELECT token, member_id FROM member_tokens'),
@@ -113,7 +114,7 @@ export async function initTeams(): Promise<void> {
           todayDate: m.today_date,
           avgReactionMs: Number(m.avg_reaction_ms),
           reactionCount: Number(m.reaction_count),
-          avatarData: '',
+          avatarData: m.avatar_data || '',
           hasVoice: !!m.has_voice,
           pushToken: m.push_token || '',
         };
@@ -159,7 +160,7 @@ async function loadTeamFromDb(upperCode: string): Promise<TeamData | null> {
     id: string; team_code: string; nickname: string; status: string;
     ignore_level: number; now_count: number; dismissed_count: number;
     last_seen: string; today_date: string; avg_reaction_ms: number; reaction_count: number;
-    has_voice: boolean;
+    has_voice: boolean; push_token: string; avatar_data: string;
   };
   type TokenRow = { token: string; member_id: string };
 
@@ -175,7 +176,9 @@ async function loadTeamFromDb(upperCode: string): Promise<TeamData | null> {
     db.query<MemberRow>(
       `SELECT id, team_code, nickname, status, ignore_level, now_count,
               dismissed_count, last_seen, today_date, avg_reaction_ms, reaction_count,
-              (voice_poke IS NOT NULL AND voice_poke != '') AS has_voice
+              (voice_poke IS NOT NULL AND voice_poke != '') AS has_voice,
+              COALESCE(push_token, '') AS push_token,
+              COALESCE(avatar_data, '') AS avatar_data
        FROM team_members WHERE team_code = $1`,
       [upperCode],
     ),
@@ -192,9 +195,9 @@ async function loadTeamFromDb(upperCode: string): Promise<TeamData | null> {
       dismissedCount: Number(m.dismissed_count), lastSeen: m.last_seen,
       todayDate: m.today_date, avgReactionMs: Number(m.avg_reaction_ms),
       reactionCount: Number(m.reaction_count),
-      avatarData: '',
+      avatarData: m.avatar_data || '',
       hasVoice: !!m.has_voice,
-      pushToken: '',
+      pushToken: m.push_token || '',
     };
   }
   for (const t of tokenRows) {

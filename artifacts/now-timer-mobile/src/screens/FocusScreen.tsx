@@ -141,18 +141,6 @@ export function FocusScreen() {
           {phaseLabel}
         </Text>
 
-        {/* Timer display */}
-        {showTimer && (isFocusing || isBreaking) && (
-          <Text style={styles.timerText}>
-            {formatTime(remainingSeconds)}
-          </Text>
-        )}
-        {devMode && (isFocusing || isBreaking) && !showTimer && (
-          <Text style={[styles.timerText, { color: colors.amber500 }]}>
-            {formatTime(remainingSeconds)}
-          </Text>
-        )}
-
         {/* Session info */}
         <Text style={styles.sessionText}>
           {'세션 '}{sessionCount}{'회 완료'}
@@ -180,37 +168,41 @@ export function FocusScreen() {
           })}
         </View>
 
-        {/* Wavy time bar — SVG wave, matching web design */}
-        {(isFocusing || isBreaking) && (
-          <View style={[styles.wavyBarRow, { width: barMaxWidth }]}>
-            <WavyProgress progress={progress} devMode={devMode} />
-          </View>
-        )}
+        {/* Wavy time bar — always takes space, invisible when idle */}
+        <View style={[styles.wavyBarRow, { width: barMaxWidth, opacity: (isFocusing || isBreaking) ? 1 : 0 }]}>
+          <WavyProgress progress={progress} devMode={devMode} />
+        </View>
 
-        {/* Hints */}
-        {settings.hideTimer && !devMode && (isFocusing || isIdle) && (
-          <Text style={styles.hintText}>
-            {'타이머 숨김 ON'}
-          </Text>
-        )}
-        {devMode && (isFocusing || isBreaking) && (
-          <Text style={[styles.hintText, { color: colors.amber600 }]}>
-            {'Dev 모드 · 5초 사이클'}
-          </Text>
-        )}
-        {isBreaking && (
-          <Text style={styles.hintText}>
-            {sessionCount > 0 &&
-              `${settings.longBreakInterval - (sessionCount % settings.longBreakInterval)}회 후 긴 휴식`}
-          </Text>
-        )}
-        {isIdle && (
-          <Text style={styles.idleHint}>
-            {'시작 버튼을 눌러 '}
-            {devMode ? '5초' : `${settings.workDuration}분`}
-            {' 집중 세션을 시작하세요.'}
-          </Text>
-        )}
+        {/* Hint — fixed height, content changes */}
+        <View style={styles.hintSlot}>
+          {showTimer && (isFocusing || isBreaking) ? (
+            <Text style={styles.timerText}>
+              {formatTime(remainingSeconds)}
+            </Text>
+          ) : devMode && (isFocusing || isBreaking) && !showTimer ? (
+            <Text style={[styles.timerText, { color: colors.amber500 }]}>
+              {formatTime(remainingSeconds)}
+            </Text>
+          ) : settings.hideTimer && !devMode && (isFocusing || isIdle) ? (
+            <Text style={styles.hintText}>{'타이머 숨김 ON'}</Text>
+          ) : isBreaking ? (
+            <Text style={styles.hintText}>
+              {sessionCount > 0 &&
+                `${settings.longBreakInterval - (sessionCount % settings.longBreakInterval)}회 후 긴 휴식`}
+            </Text>
+          ) : isIdle ? (
+            <Text style={styles.idleHint}>
+              {'시작 버튼을 눌러 '}
+              {devMode ? '5초' : `${settings.workDuration}분`}
+              {' 집중 세션을 시작하세요.'}
+            </Text>
+          ) : null}
+          {devMode && (isFocusing || isBreaking) && (
+            <Text style={[styles.hintText, { color: colors.amber600 }]}>
+              {'Dev 모드 · 5초 사이클'}
+            </Text>
+          )}
+        </View>
 
         {/* Buttons — btn_play / btn_stop only */}
         <View style={styles.buttonSection}>
@@ -319,6 +311,11 @@ const styles = StyleSheet.create({
   wavyBarRow: {
     alignItems: 'center',
     height: 48,
+  },
+  hintSlot: {
+    minHeight: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   hintText: {
     fontSize: 12,
