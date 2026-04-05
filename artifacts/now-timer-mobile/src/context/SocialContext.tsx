@@ -140,7 +140,7 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
             const incoming = event.member;
             const prevLevel = allMembersRef.current[m.code]?.[incoming.id]?.ignoreLevel ?? 0;
 
-            if (incoming.id !== m.memberId) {
+            if (incoming.id !== m.memberId && phaseRef.current !== 'focusing') {
               if (prevLevel < 3 && incoming.ignoreLevel >= 3) {
                 const hasMultiple = membershipsRef.current.length > 1;
                 setPeerAlertMsg(
@@ -231,9 +231,10 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
         setPokeFromId((data.fromId as string) ?? null);
         setPokeHasVoice(!!(data.hasVoice));
       } else if (data.type === 'alert') {
+        // 집중 중에는 남의 NOW 무시 알림 차단
+        if (phaseRef.current === 'focusing') return;
         const level = (data.level as number) ?? 2;
         const memberId = data.memberId as string | undefined;
-        // Find nickname from allMembers
         let nick = '팀원';
         for (const teamMembers of Object.values(allMembersRef.current)) {
           if (memberId && teamMembers[memberId]) {
