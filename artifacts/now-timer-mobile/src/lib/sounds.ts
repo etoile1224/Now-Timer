@@ -1,4 +1,5 @@
 import { Audio } from 'expo-av';
+import * as FileSystem from 'expo-file-system';
 
 let alertSound: Audio.Sound | null = null;
 let loopTimer: ReturnType<typeof setTimeout> | null = null;
@@ -93,8 +94,10 @@ export async function playPokeSound(): Promise<void> {
 
 export async function playVoicePoke(base64Audio: string): Promise<void> {
   try {
+    const tmpPath = `${FileSystem.cacheDirectory}voice_poke.m4a`;
+    await FileSystem.writeAsStringAsync(tmpPath, base64Audio, { encoding: FileSystem.EncodingType.Base64 });
     const { sound } = await Audio.Sound.createAsync(
-      { uri: `data:audio/m4a;base64,${base64Audio}` },
+      { uri: tmpPath },
       { shouldPlay: true, volume: 0.8 }
     );
     sound.setOnPlaybackStatusUpdate((status) => {
@@ -103,7 +106,6 @@ export async function playVoicePoke(base64Audio: string): Promise<void> {
       }
     });
   } catch {
-    // Fallback to default poke sound
     await playPokeSound();
   }
 }

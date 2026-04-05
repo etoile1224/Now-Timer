@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Audio } from 'expo-av';
+import * as FileSystem from 'expo-file-system';
 import { Mic, Square, Play, Trash2 } from 'lucide-react-native';
 import { colors } from '@/lib/colors';
 
@@ -102,13 +103,14 @@ export function VoiceRecorder({ audioBase64, onSave, onDelete, maxDuration = 5 }
       if (uri) {
         const result = await Audio.Sound.createAsync({ uri }, { shouldPlay: true });
         sound = result.sound;
-      } else {
-        // Play from base64 data URI
-        const result = await Audio.Sound.createAsync(
-          { uri: `data:audio/m4a;base64,${b64}` },
-          { shouldPlay: true }
-        );
+      } else if (b64) {
+        // Write base64 to temp file then play (data URI not supported on iOS)
+        const tmpPath = `${FileSystem.cacheDirectory}voice_preview.m4a`;
+        await FileSystem.writeAsStringAsync(tmpPath, b64, { encoding: FileSystem.EncodingType.Base64 });
+        const result = await Audio.Sound.createAsync({ uri: tmpPath }, { shouldPlay: true });
         sound = result.sound;
+      } else {
+        return;
       }
 
       soundRef.current = sound;
