@@ -3,4 +3,4 @@ packageManager = "pnpm"
 buildCommand = "pnpm run -r --if-present build"
 
 [start]
-command = "cd artifacts/api-server && node --enable-source-maps dist/index.mjs"
+command = "node artifacts/api-server/db/migrate.mjs && node --enable-source-maps artifacts/api-server/dist/index.mjs"
