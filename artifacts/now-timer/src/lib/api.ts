@@ -79,6 +79,10 @@ export const api = {
     return request('POST', `/members/${memberId}/voice`, { audio }, token);
   },
 
+  getAvatar(memberId: string): Promise<{ avatarData: string }> {
+    return request('GET', `/members/${memberId}/avatar`);
+  },
+
   getVoice(memberId: string): Promise<{ audio: string }> {
     return request('GET', `/members/${memberId}/voice`);
   },

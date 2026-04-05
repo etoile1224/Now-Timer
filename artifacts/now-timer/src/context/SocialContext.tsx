@@ -114,6 +114,10 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
             member?: Member;
             toMemberId?: string;
             fromNickname?: string;
+            fromMemberId?: string;
+            hasVoice?: boolean;
+            memberId?: string;
+            avatarData?: string;
           };
 
           if (event.type === 'init' && event.team) {
@@ -164,8 +168,21 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
             }));
           } else if (event.type === 'poke' && event.toMemberId === m.memberId) {
             setPokeFrom(event.fromNickname ?? '팀원');
-            setPokeFromId((event as { fromMemberId?: string }).fromMemberId ?? null);
-            setPokeHasVoice((event as { hasVoice?: boolean }).hasVoice ?? false);
+            setPokeFromId(event.fromMemberId ?? null);
+            setPokeHasVoice(event.hasVoice ?? false);
+          } else if (event.type === 'avatar' && event.memberId && event.avatarData !== undefined) {
+            // Lightweight avatar update — no full member object
+            setAllMembers((prev) => {
+              const teamMembers = prev[m.code];
+              if (!teamMembers?.[event.memberId!]) return prev;
+              return {
+                ...prev,
+                [m.code]: {
+                  ...teamMembers,
+                  [event.memberId!]: { ...teamMembers[event.memberId!], avatarData: event.avatarData! },
+                },
+              };
+            });
           }
         } catch {}
       };
