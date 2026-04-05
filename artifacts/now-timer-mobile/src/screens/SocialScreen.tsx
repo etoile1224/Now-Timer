@@ -804,6 +804,7 @@ export function PeerAlertToast() {
 
   useEffect(() => {
     if (!peerAlertMsg) return;
+    Vibration.vibrate([120, 60, 120, 60, 280]);
     const t = setTimeout(clearPeerAlert, 6000);
     return () => clearTimeout(t);
   }, [peerAlertMsg, clearPeerAlert]);
@@ -811,15 +812,21 @@ export function PeerAlertToast() {
   if (!peerAlertMsg) return null;
 
   return (
-    <View style={toastStyles.peerContainer}>
-      <View style={toastStyles.peerToast}>
-        <Zap size={15} color="#fff" />
-        <Text style={toastStyles.peerText} numberOfLines={1}>{peerAlertMsg}</Text>
-        <TouchableOpacity onPress={clearPeerAlert}>
-          <Text style={toastStyles.peerClose}>{'\u2715'}</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+    <Modal visible transparent animationType="fade" statusBarTranslucent>
+      <TouchableOpacity
+        style={toastStyles.peerOverlay}
+        activeOpacity={1}
+        onPress={clearPeerAlert}
+      >
+        <View style={toastStyles.peerToast}>
+          <Zap size={15} color="#fff" />
+          <Text style={toastStyles.peerText} numberOfLines={2}>{peerAlertMsg}</Text>
+          <TouchableOpacity onPress={clearPeerAlert}>
+            <Text style={toastStyles.peerClose}>{'\u2715'}</Text>
+          </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+    </Modal>
   );
 }
 
@@ -867,14 +874,13 @@ export function PokeToast() {
 }
 
 const toastStyles = StyleSheet.create({
-  peerContainer: {
-    position: 'absolute',
-    bottom: 100,
-    left: 0,
-    right: 0,
+  peerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.25)',
+    justifyContent: 'flex-end',
     alignItems: 'center',
+    paddingBottom: 140,
     paddingHorizontal: 16,
-    zIndex: 60,
   },
   peerToast: {
     flexDirection: 'row',
@@ -882,14 +888,14 @@ const toastStyles = StyleSheet.create({
     gap: 8,
     backgroundColor: '#ea580c',
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 14,
     borderRadius: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.2,
     shadowRadius: 8,
-    elevation: 4,
-    maxWidth: 320,
+    elevation: 6,
+    maxWidth: 340,
   },
   peerText: {
     fontSize: 14,

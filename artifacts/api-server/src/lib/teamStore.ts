@@ -412,7 +412,7 @@ export function pokeMember(fromId: string, toId: string): boolean {
       to.member.pushToken,
       `${from.member.nickname}님이 깨웁니다! 👊`,
       'NOW! 알림을 무시하지 마세요!',
-      { type: 'poke', fromId, fromNickname: from.member.nickname },
+      { type: 'poke', fromId, fromNickname: from.member.nickname, hasVoice: from.member.hasVoice },
     );
   }
   return true;

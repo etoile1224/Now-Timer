@@ -222,23 +222,35 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
     };
   }, [memberships]);
 
-  // Push notification listener — handles poke when SSE is disconnected or app is in background
+  // Push notification listener — handles poke + alert when SSE is disconnected or app is in background
   useEffect(() => {
-    const sub = Notifications.addNotificationReceivedListener((notification) => {
-      const data = notification.request.content.data as { type?: string; fromNickname?: string; fromId?: string } | undefined;
-      if (data?.type === 'poke') {
-        setPokeFrom(data.fromNickname ?? '팀원');
-        setPokeFromId(data.fromId ?? null);
-        setPokeHasVoice(false);
+    function handlePushData(data: Record<string, unknown> | undefined) {
+      if (!data?.type) return;
+      if (data.type === 'poke') {
+        setPokeFrom((data.fromNickname as string) ?? '팀원');
+        setPokeFromId((data.fromId as string) ?? null);
+        setPokeHasVoice(!!(data.hasVoice));
+      } else if (data.type === 'alert') {
+        const level = (data.level as number) ?? 2;
+        const memberId = data.memberId as string | undefined;
+        // Find nickname from allMembers
+        let nick = '팀원';
+        for (const teamMembers of Object.values(allMembersRef.current)) {
+          if (memberId && teamMembers[memberId]) {
+            nick = teamMembers[memberId].nickname;
+            break;
+          }
+        }
+        setPeerAlertMsg(`${nick}님이 NOW! Lv.${level}을 무시하고 있어요`);
+        Vibration.vibrate([120, 60, 120, 60, 280]);
       }
+    }
+
+    const sub = Notifications.addNotificationReceivedListener((notification) => {
+      handlePushData(notification.request.content.data as Record<string, unknown> | undefined);
     });
     const responseSub = Notifications.addNotificationResponseReceivedListener((response) => {
-      const data = response.notification.request.content.data as { type?: string; fromNickname?: string; fromId?: string } | undefined;
-      if (data?.type === 'poke') {
-        setPokeFrom(data.fromNickname ?? '팀원');
-        setPokeFromId(data.fromId ?? null);
-        setPokeHasVoice(false);
-      }
+      handlePushData(response.notification.request.content.data as Record<string, unknown> | undefined);
     });
     return () => {
       sub.remove();
