@@ -33,6 +33,7 @@ export interface Member {
   avatarData: string;
   hasVoice: boolean;
   pushToken: string;
+  pokeCount: number;
 }
 
 export interface TeamData {
@@ -77,12 +78,13 @@ export async function initTeams(): Promise<void> {
       id: string; team_code: string; nickname: string; status: string;
       ignore_level: number; now_count: number; dismissed_count: number;
       last_seen: string; today_date: string; avg_reaction_ms: number; reaction_count: number;
-      has_voice: boolean; push_token: string; avatar_data: string;
+      has_voice: boolean; push_token: string; avatar_data: string; poke_count: number;
     };
     type TokenRow = { token: string; member_id: string };
 
-    // Ensure name column exists (migration for existing DBs)
+    // Ensure columns exist (migration for existing DBs)
     await db.run("ALTER TABLE teams ADD COLUMN IF NOT EXISTS name TEXT NOT NULL DEFAULT ''").catch(() => {});
+    await db.run("ALTER TABLE team_members ADD COLUMN IF NOT EXISTS poke_count INTEGER NOT NULL DEFAULT 0").catch(() => {});
 
     const [teamRows, memberRows, tokenRows] = await Promise.all([
       db.query<TeamRow>('SELECT id, code, name FROM teams'),
@@ -91,7 +93,8 @@ export async function initTeams(): Promise<void> {
                 dismissed_count, last_seen, today_date, avg_reaction_ms, reaction_count,
                 (voice_poke IS NOT NULL AND voice_poke != '') AS has_voice,
                 COALESCE(push_token, '') AS push_token,
-                COALESCE(avatar_data, '') AS avatar_data
+                COALESCE(avatar_data, '') AS avatar_data,
+                COALESCE(poke_count, 0) AS poke_count
          FROM team_members`,
       ),
       db.query<TokenRow>('SELECT token, member_id FROM member_tokens'),
@@ -117,6 +120,7 @@ export async function initTeams(): Promise<void> {
           avatarData: m.avatar_data || '',
           hasVoice: !!m.has_voice,
           pushToken: m.push_token || '',
+          pokeCount: Number(m.poke_count) || 0,
         };
       }
     }
@@ -160,7 +164,7 @@ async function loadTeamFromDb(upperCode: string): Promise<TeamData | null> {
     id: string; team_code: string; nickname: string; status: string;
     ignore_level: number; now_count: number; dismissed_count: number;
     last_seen: string; today_date: string; avg_reaction_ms: number; reaction_count: number;
-    has_voice: boolean; push_token: string; avatar_data: string;
+    has_voice: boolean; push_token: string; avatar_data: string; poke_count: number;
   };
   type TokenRow = { token: string; member_id: string };
 
@@ -178,7 +182,8 @@ async function loadTeamFromDb(upperCode: string): Promise<TeamData | null> {
               dismissed_count, last_seen, today_date, avg_reaction_ms, reaction_count,
               (voice_poke IS NOT NULL AND voice_poke != '') AS has_voice,
               COALESCE(push_token, '') AS push_token,
-              COALESCE(avatar_data, '') AS avatar_data
+              COALESCE(avatar_data, '') AS avatar_data,
+              COALESCE(poke_count, 0) AS poke_count
        FROM team_members WHERE team_code = $1`,
       [upperCode],
     ),
@@ -198,6 +203,7 @@ async function loadTeamFromDb(upperCode: string): Promise<TeamData | null> {
       avatarData: m.avatar_data || '',
       hasVoice: !!m.has_voice,
       pushToken: m.push_token || '',
+      pokeCount: Number(m.poke_count) || 0,
     };
   }
   for (const t of tokenRows) {
@@ -234,6 +240,7 @@ export async function joinTeam(
     avatarData: '',
     hasVoice: false,
     pushToken: '',
+    pokeCount: 0,
   };
 
   const token = randomBytes(16).toString('hex');
@@ -399,6 +406,12 @@ export function pokeMember(fromId: string, toId: string): boolean {
   const from = getMember(fromId);
   const to = getMember(toId);
   if (!from || !to || from.team.code !== to.team.code) return false;
+
+  // Increment poke count for the sender
+  from.member.pokeCount += 1;
+  void db.run('UPDATE team_members SET poke_count = $1 WHERE id = $2', [from.member.pokeCount, fromId]);
+
+  // Broadcast poke event + updated sender status (with new pokeCount)
   broadcast(to.team.code, {
     type: 'poke',
     toMemberId: toId,
@@ -406,6 +419,7 @@ export function pokeMember(fromId: string, toId: string): boolean {
     fromMemberId: fromId,
     hasVoice: from.member.hasVoice,
   });
+  broadcast(from.team.code, { type: 'status', member: { ...from.member } });
   // Send push notification to poked member
   if (to.member.pushToken) {
     void sendPushNotification(

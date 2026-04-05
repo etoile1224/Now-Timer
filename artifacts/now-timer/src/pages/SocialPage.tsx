@@ -119,20 +119,18 @@ function TeamStats({
 }) {
   const list = Object.values(members);
   const me = members[myId];
-  const totalNow = list.reduce((s, m) => s + m.nowCount, 0);
-  const myRate = me ? complianceRate(me) : null;
+  const totalPokes = list.reduce((s, m) => s + (m.pokeCount ?? 0), 0);
+  const myPokes = me?.pokeCount ?? 0;
 
   return (
     <div className="grid grid-cols-2 gap-3">
       <div className="bg-card rounded-2xl border border-border p-3 text-center">
-        <p className="text-2xl font-black text-foreground">{totalNow}</p>
-        <p className="text-xs text-muted-foreground mt-0.5">팀 NOW! 횟수</p>
+        <p className="text-2xl font-black text-foreground">{totalPokes}</p>
+        <p className="text-xs text-muted-foreground mt-0.5">팀 깨우기 횟수</p>
       </div>
       <div className="bg-card rounded-2xl border border-border p-3 text-center">
-        <p className="text-2xl font-black text-foreground">
-          {myRate !== null ? `${myRate}%` : '—'}
-        </p>
-        <p className="text-xs text-muted-foreground mt-0.5">내 준수율</p>
+        <p className="text-2xl font-black text-foreground">{myPokes}</p>
+        <p className="text-xs text-muted-foreground mt-0.5">내가 깨운 횟수</p>
       </div>
     </div>
   );

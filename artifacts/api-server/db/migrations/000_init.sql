@@ -43,7 +43,8 @@ CREATE TABLE IF NOT EXISTS team_members (
   reaction_count INTEGER NOT NULL DEFAULT 0,
   avatar_data TEXT DEFAULT '',
   voice_poke TEXT DEFAULT '',
-  push_token TEXT DEFAULT ''
+  push_token TEXT DEFAULT '',
+  poke_count INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS member_tokens (

@@ -14,6 +14,7 @@ export interface Member {
   reactionCount: number;
   avatarData: string;
   hasVoice: boolean;
+  pokeCount: number;
 }
 
 export interface TeamData {

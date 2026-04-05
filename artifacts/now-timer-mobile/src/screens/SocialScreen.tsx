@@ -217,20 +217,18 @@ function TeamStats({
 }) {
   const list = Object.values(members);
   const me = members[myId];
-  const totalNow = list.reduce((s, m) => s + m.nowCount, 0);
-  const myRate = me ? complianceRate(me) : null;
+  const totalPokes = list.reduce((s, m) => s + (m.pokeCount ?? 0), 0);
+  const myPokes = me?.pokeCount ?? 0;
 
   return (
     <View style={teamStatsStyles.row}>
       <View style={teamStatsStyles.statCard}>
-        <Text style={teamStatsStyles.statValue}>{totalNow}</Text>
-        <Text style={teamStatsStyles.statLabel}>{'\uD300 NOW! \uD69F\uC218'}</Text>
+        <Text style={teamStatsStyles.statValue}>{totalPokes}</Text>
+        <Text style={teamStatsStyles.statLabel}>{'\uD300 \uAE68\uC6B0\uAE30 \uD69F\uC218'}</Text>
       </View>
       <View style={teamStatsStyles.statCard}>
-        <Text style={teamStatsStyles.statValue}>
-          {myRate !== null ? `${myRate}%` : '\u2014'}
-        </Text>
-        <Text style={teamStatsStyles.statLabel}>{'\uB0B4 \uC900\uC218\uC728'}</Text>
+        <Text style={teamStatsStyles.statValue}>{myPokes}</Text>
+        <Text style={teamStatsStyles.statLabel}>{'\uB0B4\uAC00 \uAE68\uC6B4 \uD69F\uC218'}</Text>
       </View>
     </View>
   );
