@@ -9,7 +9,9 @@ import React, {
 import { Vibration } from 'react-native';
 import { useTimer } from '@/context/TimerContext';
 import { useAuth } from '@/context/AuthContext';
+import EventSource from 'react-native-sse';
 import { api, API_BASE_URL, type Member } from '@/lib/api';
+import { registerForPushNotifications } from '@/lib/pushNotifications';
 import {
   type Membership,
   getMemberships,
@@ -28,6 +30,8 @@ interface SocialState {
   members: Record<string, Member>;
   allMembers: Record<string, Record<string, Member>>;
   pokeFrom: string | null;
+  pokeFromId: string | null;
+  pokeHasVoice: boolean;
   peerAlertMsg: string | null;
   clearPoke: () => void;
   clearPeerAlert: () => void;
@@ -45,47 +49,6 @@ export function useSocial(): SocialState {
   return ctx;
 }
 
-async function connectSSE(
-  url: string,
-  onMessage: (data: unknown) => void,
-  onError: () => void,
-): Promise<() => void> {
-  let cancelled = false;
-  const cancel = () => { cancelled = true; };
-
-  try {
-    const res = await fetch(url, {
-      headers: { Accept: 'text/event-stream' },
-    });
-    const reader = res.body?.getReader();
-    if (!reader) { onError(); return cancel; }
-    const decoder = new TextDecoder();
-    let buffer = '';
-
-    (async () => {
-      try {
-        while (!cancelled) {
-          const { done, value } = await reader.read();
-          if (done || cancelled) break;
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop() ?? '';
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              try { onMessage(JSON.parse(line.slice(6))); } catch {}
-            }
-          }
-        }
-      } catch {
-        if (!cancelled) onError();
-      }
-    })();
-  } catch {
-    onError();
-  }
-
-  return cancel;
-}
 
 export function SocialProvider({ children }: { children: React.ReactNode }) {
   const { phase, ignoreLevel } = useTimer();
@@ -113,6 +76,8 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
 
   const [allMembers, setAllMembers] = useState<Record<string, Record<string, Member>>>({});
   const [pokeFrom, setPokeFrom] = useState<string | null>(null);
+  const [pokeFromId, setPokeFromId] = useState<string | null>(null);
+  const [pokeHasVoice, setPokeHasVoice] = useState(false);
   const [peerAlertMsg, setPeerAlertMsg] = useState<string | null>(null);
 
   const cancelMap = useRef<Map<string, () => void>>(new Map());
@@ -136,80 +101,86 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
   function connectTeamSSE(m: Membership) {
     if (cancelMap.current.has(m.code)) return;
 
-    let active = true;
-    let cancelFn: (() => void) | null = null;
+    let retryTimeout: ReturnType<typeof setTimeout> | null = null;
 
     function doConnect() {
-      if (!active) return;
       const url = `${API_BASE_URL}/api/teams/${m.code}/stream?memberId=${m.memberId}`;
+      const es = new EventSource(url);
 
-      connectSSE(
-        url,
-        (data) => {
-          const event = data as {
+      es.addEventListener('message', (evt: { data?: string }) => {
+        if (!evt.data) return;
+        try {
+          const event = JSON.parse(evt.data) as {
             type: string;
             team?: { members: Record<string, Member> };
             member?: Member;
+            memberId?: string;
+            avatarData?: string;
             toMemberId?: string;
             fromNickname?: string;
+            fromMemberId?: string;
+            hasVoice?: boolean;
           };
 
           if (event.type === 'init' && event.team) {
-            setAllMembers((prev) => ({
-              ...prev,
-              [m.code]: { ...event.team!.members },
-            }));
-          } else if (
-            (event.type === 'status' || event.type === 'join') &&
-            event.member
-          ) {
+            setAllMembers((prev) => ({ ...prev, [m.code]: { ...event.team!.members } }));
+          } else if ((event.type === 'status' || event.type === 'join') && event.member) {
             const incoming = event.member;
-            const prevLevel =
-              allMembersRef.current[m.code]?.[incoming.id]?.ignoreLevel ?? 0;
-            const newLevel = incoming.ignoreLevel;
+            const prevLevel = allMembersRef.current[m.code]?.[incoming.id]?.ignoreLevel ?? 0;
 
             if (incoming.id !== m.memberId) {
-              if (prevLevel < 3 && newLevel >= 3) {
+              if (prevLevel < 3 && incoming.ignoreLevel >= 3) {
                 const hasMultiple = membershipsRef.current.length > 1;
-                const msg = hasMultiple
-                  ? `[${m.code}] ${incoming.nickname}\uB2D8\uC774 NOW! Lv.3\uC744 \uBB34\uC2DC\uD558\uACE0 \uC788\uC5B4\uC694`
-                  : `${incoming.nickname}\uB2D8\uC774 NOW! Lv.3\uC744 \uBB34\uC2DC\uD558\uACE0 \uC788\uC5B4\uC694`;
-                setPeerAlertMsg(msg);
+                setPeerAlertMsg(
+                  hasMultiple
+                    ? `[${m.code}] ${incoming.nickname}\uB2D8\uC774 NOW! Lv.3\uC744 \uBB34\uC2DC\uD558\uACE0 \uC788\uC5B4\uC694`
+                    : `${incoming.nickname}\uB2D8\uC774 NOW! Lv.3\uC744 \uBB34\uC2DC\uD558\uACE0 \uC788\uC5B4\uC694`,
+                );
                 Vibration.vibrate([120, 60, 120, 60, 280]);
-              } else if (prevLevel < 2 && newLevel >= 2) {
+              } else if (prevLevel < 2 && incoming.ignoreLevel >= 2) {
                 const hasMultiple = membershipsRef.current.length > 1;
-                const msg = hasMultiple
-                  ? `[${m.code}] ${incoming.nickname}\uB2D8\uC774 NOW! Lv.2\uB97C \uBB34\uC2DC\uD558\uACE0 \uC788\uC5B4\uC694`
-                  : `${incoming.nickname}\uB2D8\uC774 NOW! Lv.2\uB97C \uBB34\uC2DC\uD558\uACE0 \uC788\uC5B4\uC694`;
-                setPeerAlertMsg(msg);
+                setPeerAlertMsg(
+                  hasMultiple
+                    ? `[${m.code}] ${incoming.nickname}\uB2D8\uC774 NOW! Lv.2\uB97C \uBB34\uC2DC\uD558\uACE0 \uC788\uC5B4\uC694`
+                    : `${incoming.nickname}\uB2D8\uC774 NOW! Lv.2\uB97C \uBB34\uC2DC\uD558\uACE0 \uC788\uC5B4\uC694`,
+                );
               }
             }
 
             setAllMembers((prev) => ({
               ...prev,
-              [m.code]: {
-                ...(prev[m.code] ?? {}),
-                [incoming.id]: incoming,
-              },
+              [m.code]: { ...(prev[m.code] ?? {}), [incoming.id]: incoming },
             }));
+          } else if (event.type === 'avatar' && event.memberId && event.avatarData !== undefined) {
+            setAllMembers((prev) => {
+              const teamMembers = prev[m.code] ?? {};
+              const existing = teamMembers[event.memberId!];
+              if (!existing) return prev;
+              return {
+                ...prev,
+                [m.code]: { ...teamMembers, [event.memberId!]: { ...existing, avatarData: event.avatarData! } },
+              };
+            });
           } else if (event.type === 'poke' && event.toMemberId === m.memberId) {
             setPokeFrom(event.fromNickname ?? '\uD300\uC6D0');
+            setPokeFromId(event.fromMemberId ?? null);
+            setPokeHasVoice(event.hasVoice ?? false);
           }
-        },
-        () => {
-          cancelMap.current.delete(m.code);
-          if (active) setTimeout(doConnect, 3000);
-        },
-      ).then((cancel) => {
-        cancelFn = cancel;
+        } catch {}
+      });
+
+      es.addEventListener('error', () => {
+        es.close();
+        retryTimeout = setTimeout(doConnect, 3000);
+      });
+
+      cancelMap.current.set(m.code, () => {
+        es.close();
+        if (retryTimeout) clearTimeout(retryTimeout);
       });
     }
 
     doConnect();
-    cancelMap.current.set(m.code, () => {
-      active = false;
-      cancelFn?.();
-    });
   }
 
   useEffect(() => {
@@ -223,6 +194,14 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
         cancelMap.current.delete(code);
       }
     }
+    // Register push token for all memberships
+    registerForPushNotifications().then((pushToken) => {
+      if (!pushToken) return;
+      for (const m of memberships) {
+        api.registerPushToken(m.memberId, pushToken, m.token).catch(() => {});
+      }
+    });
+
     return () => {
       for (const [, cancel] of cancelMap.current) {
         cancel();
@@ -312,7 +291,11 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
     [activeTeamCode],
   );
 
-  const clearPoke = useCallback(() => setPokeFrom(null), []);
+  const clearPoke = useCallback(() => {
+    setPokeFrom(null);
+    setPokeFromId(null);
+    setPokeHasVoice(false);
+  }, []);
   const clearPeerAlert = useCallback(() => setPeerAlertMsg(null), []);
 
   const activeMembership = memberships.find((m) => m.code === activeTeamCode) ?? null;
@@ -329,6 +312,8 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
         members,
         allMembers,
         pokeFrom,
+        pokeFromId,
+        pokeHasVoice,
         peerAlertMsg,
         clearPoke,
         clearPeerAlert,

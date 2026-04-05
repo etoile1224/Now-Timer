@@ -88,6 +88,21 @@ router.post('/members/:fromId/poke/:toId', (req, res) => {
   res.json({ ok: true });
 });
 
+router.post('/members/:id/push-token', (req, res) => {
+  const token = req.headers['x-member-token'] as string | undefined;
+  if (!token || !store.verifyToken(req.params.id, token)) {
+    res.status(401).json({ error: 'Invalid or missing member token' });
+    return;
+  }
+  const { pushToken } = req.body as { pushToken?: string };
+  if (!pushToken) {
+    res.status(400).json({ error: 'pushToken is required' });
+    return;
+  }
+  store.registerPushToken(req.params.id, pushToken);
+  res.json({ ok: true });
+});
+
 router.get('/members/:id/avatar', async (req, res) => {
   const avatarData = await store.getAvatar(req.params.id);
   res.json({ avatarData: avatarData ?? '' });

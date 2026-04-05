@@ -32,6 +32,7 @@ export interface Member {
   reactionCount: number;
   avatarData: string;
   hasVoice: boolean;
+  pushToken: string;
 }
 
 export interface TeamData {
@@ -109,6 +110,7 @@ export async function initTeams(): Promise<void> {
           reactionCount: Number(m.reaction_count),
           avatarData: '',
           hasVoice: !!m.has_voice,
+          pushToken: '',
         };
       }
     }
@@ -177,6 +179,7 @@ async function loadTeamFromDb(upperCode: string): Promise<TeamData | null> {
       reactionCount: Number(m.reaction_count),
       avatarData: '',
       hasVoice: !!m.has_voice,
+      pushToken: '',
     };
   }
   for (const t of tokenRows) {
@@ -212,6 +215,7 @@ export async function joinTeam(
     reactionCount: 0,
     avatarData: '',
     hasVoice: false,
+    pushToken: '',
   };
 
   const token = randomBytes(16).toString('hex');
@@ -320,6 +324,26 @@ export function updateStatus(
   })();
 
   broadcast(team.code, { type: 'status', member: { ...member }, prevIgnoreLevel });
+
+  // Push notifications for NOW! level escalation
+  if (prevIgnoreLevel < 2 && member.ignoreLevel >= 2) {
+    sendPushToTeammates(
+      team.code,
+      memberId,
+      `${member.nickname}님이 NOW! Lv.2 무시 중`,
+      '깨워주세요!',
+      { type: 'alert', memberId, level: 2 },
+    );
+  } else if (prevIgnoreLevel < 3 && member.ignoreLevel >= 3) {
+    sendPushToTeammates(
+      team.code,
+      memberId,
+      `🚨 ${member.nickname}님이 NOW! Lv.3 무시 중!`,
+      '긴급! 깨워주세요!',
+      { type: 'alert', memberId, level: 3 },
+    );
+  }
+
   return { team, member };
 }
 
@@ -364,6 +388,67 @@ export function pokeMember(fromId: string, toId: string): boolean {
     fromMemberId: fromId,
     hasVoice: from.member.hasVoice,
   });
+  // Send push notification to poked member
+  if (to.member.pushToken) {
+    void sendPushNotification(
+      to.member.pushToken,
+      `${from.member.nickname}님이 깨웁니다! 👊`,
+      'NOW! 알림을 무시하지 마세요!',
+      { type: 'poke', fromId, fromNickname: from.member.nickname },
+    );
+  }
+  return true;
+}
+
+// --- Expo Push Notifications ---
+
+async function sendPushNotification(
+  pushToken: string,
+  title: string,
+  body: string,
+  data?: Record<string, unknown>,
+): Promise<void> {
+  if (!pushToken || !pushToken.startsWith('ExponentPushToken')) return;
+  try {
+    await fetch('https://exp.host/--/api/v2/push/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        to: pushToken,
+        title,
+        body,
+        sound: 'default',
+        priority: 'high',
+        data,
+      }),
+    });
+  } catch (err) {
+    console.warn('[push] Failed to send push:', err);
+  }
+}
+
+function sendPushToTeammates(
+  teamCode: string,
+  excludeMemberId: string,
+  title: string,
+  body: string,
+  data?: Record<string, unknown>,
+): void {
+  const team = teams.get(teamCode);
+  if (!team) return;
+  for (const m of Object.values(team.members)) {
+    if (m.id === excludeMemberId) continue;
+    if (m.pushToken) {
+      void sendPushNotification(m.pushToken, title, body, data);
+    }
+  }
+}
+
+export function registerPushToken(memberId: string, pushToken: string): boolean {
+  const found = getMember(memberId);
+  if (!found) return false;
+  found.member.pushToken = pushToken;
+  void db.run('UPDATE team_members SET push_token = $1 WHERE id = $2', [pushToken, memberId]);
   return true;
 }
 

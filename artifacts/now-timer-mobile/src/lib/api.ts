@@ -12,6 +12,8 @@ export interface Member {
   todayDate?: string;
   avgReactionMs: number;
   reactionCount: number;
+  avatarData: string;
+  hasVoice: boolean;
 }
 
 export interface TeamData {
@@ -57,6 +59,21 @@ export const api = {
   },
   poke(fromId: string, toId: string, token: string): Promise<void> {
     return request('POST', `/members/${fromId}/poke/${toId}`, undefined, token);
+  },
+  updateAvatar(memberId: string, avatarData: string, token: string): Promise<void> {
+    return request('PATCH', `/members/${memberId}`, { avatarData }, token);
+  },
+  getAvatar(memberId: string): Promise<{ avatarData: string }> {
+    return request('GET', `/members/${memberId}/avatar`);
+  },
+  uploadVoice(memberId: string, audio: string, token: string): Promise<void> {
+    return request('POST', `/members/${memberId}/voice`, { audio }, token);
+  },
+  getVoice(memberId: string): Promise<{ audio: string }> {
+    return request('GET', `/members/${memberId}/voice`);
+  },
+  registerPushToken(memberId: string, pushToken: string, token: string): Promise<void> {
+    return request('POST', `/members/${memberId}/push-token`, { pushToken }, token);
   },
   getStats(memberId: string, token: string, period: 'today' | 'week' | 'all'): Promise<{
     totalSessions: number;
