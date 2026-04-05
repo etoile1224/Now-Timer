@@ -281,6 +281,7 @@ const styles = StyleSheet.create({
   phaseLabel: {
     fontSize: 28,
     fontFamily: 'KotraBold',
+    height: 38,
   },
   timerText: {
     fontSize: 52,
@@ -292,11 +293,14 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: 'KotraGothic',
     color: colors.foreground,
+    height: 22,
   },
   dotsRow: {
     flexDirection: 'row',
     justifyContent: 'center',
+    alignItems: 'center',
     gap: 10,
+    height: 40,
   },
   dotWrapper: {
     width: 36,
@@ -313,7 +317,7 @@ const styles = StyleSheet.create({
     height: 48,
   },
   hintSlot: {
-    minHeight: 60,
+    height: 90,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -332,6 +336,7 @@ const styles = StyleSheet.create({
   buttonSection: {
     alignItems: 'center',
     marginTop: 8,
+    height: 110,
   },
   btnWrap: {
     width: 110,
