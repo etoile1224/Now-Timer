@@ -31,6 +31,12 @@
     "plugins": [
       "expo-notifications",
       "expo-font"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "00f246df-795e-4f4a-9453-c4d642f09dee"
+      }
+    },
+    "owner": "nova_lab"
   }
 }
