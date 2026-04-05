@@ -50,3 +50,5 @@ Thumbs.db
 
 # Runtime data files (contain user data - do not commit)
 artifacts/api-server/data/users.json
+.claude/worktrees/
+.config/
