@@ -95,7 +95,7 @@ export async function playPokeSound(): Promise<void> {
 export async function playVoicePoke(base64Audio: string): Promise<void> {
   try {
     const tmpPath = `${FileSystem.cacheDirectory}voice_poke.m4a`;
-    await FileSystem.writeAsStringAsync(tmpPath, base64Audio, { encoding: FileSystem.EncodingType.Base64 });
+    await FileSystem.writeAsStringAsync(tmpPath, base64Audio, { encoding: 'base64' });
     const { sound } = await Audio.Sound.createAsync(
       { uri: tmpPath },
       { shouldPlay: true, volume: 0.8 }

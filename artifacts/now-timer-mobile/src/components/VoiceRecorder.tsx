@@ -106,7 +106,7 @@ export function VoiceRecorder({ audioBase64, onSave, onDelete, maxDuration = 5 }
       } else if (b64) {
         // Write base64 to temp file then play (data URI not supported on iOS)
         const tmpPath = `${FileSystem.cacheDirectory}voice_preview.m4a`;
-        await FileSystem.writeAsStringAsync(tmpPath, b64, { encoding: FileSystem.EncodingType.Base64 });
+        await FileSystem.writeAsStringAsync(tmpPath, b64, { encoding: 'base64' });
         const result = await Audio.Sound.createAsync({ uri: tmpPath }, { shouldPlay: true });
         sound = result.sound;
       } else {
