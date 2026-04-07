@@ -299,6 +299,32 @@ export function PixelEditorModal({ visible, value, onSave, onCancel }: PixelEdit
 
         {/* ── Bottom panel (scrollable) ── */}
         <ScrollView style={es.bottomPanel} contentContainerStyle={es.bottomContent} bounces={false}>
+          {/* Templates */}
+          <TouchableOpacity onPress={() => setShowTemplates(v => !v)}>
+            <Text style={es.templateToggle}>
+              {showTemplates ? '템플릿 닫기 ▲' : '템플릿으로 시작하기 ▼'}
+            </Text>
+          </TouchableOpacity>
+          {showTemplates && (
+            <View style={es.templateRow}>
+              {TEMPLATES.map(t => (
+                <TouchableOpacity
+                  key={t.name}
+                  onPress={() => {
+                    const g = t.grid.map(r => [...r]);
+                    setGrid(g);
+                    gridRef.current = g;
+                    setShowTemplates(false);
+                  }}
+                  style={es.templateBtn}
+                >
+                  <Text style={{ fontSize: 20 }}>{t.emoji}</Text>
+                  <Text style={es.templateName}>{t.name}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+
           {/* Tool bar */}
           <View style={es.toolRow}>
             {([
@@ -343,32 +369,6 @@ export function PixelEditorModal({ visible, value, onSave, onCancel }: PixelEdit
               />
             ))}
           </View>
-
-          {/* Templates */}
-          <TouchableOpacity onPress={() => setShowTemplates(v => !v)}>
-            <Text style={es.templateToggle}>
-              {showTemplates ? '템플릿 닫기 ▲' : '템플릿으로 시작하기 ▼'}
-            </Text>
-          </TouchableOpacity>
-          {showTemplates && (
-            <View style={es.templateRow}>
-              {TEMPLATES.map(t => (
-                <TouchableOpacity
-                  key={t.name}
-                  onPress={() => {
-                    const g = t.grid.map(r => [...r]);
-                    setGrid(g);
-                    gridRef.current = g;
-                    setShowTemplates(false);
-                  }}
-                  style={es.templateBtn}
-                >
-                  <Text style={{ fontSize: 20 }}>{t.emoji}</Text>
-                  <Text style={es.templateName}>{t.name}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
         </ScrollView>
       </View>
     </Modal>
