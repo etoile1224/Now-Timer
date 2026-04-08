@@ -113,6 +113,9 @@ export const api = {
   registerPushToken(memberId: string, pushToken: string, token: string): Promise<void> {
     return request('POST', `/members/${memberId}/push-token`, { pushToken }, token);
   },
+  convertPhoto(imageBase64: string): Promise<{ grid: (string | null)[][] }> {
+    return request('POST', '/convert-photo', { image: imageBase64 });
+  },
   getStats(memberId: string, token: string, period: 'today' | 'week' | 'all'): Promise<{
     totalSessions: number;
     avgReactionMs: number | null;
