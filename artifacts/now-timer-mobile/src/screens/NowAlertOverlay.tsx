@@ -266,9 +266,9 @@ export function NowAlertOverlay({ type }: NowAlertOverlayProps) {
   const dismissLabel = isWork ? '확인 — 쉬러 갈게요' : '확인 — 집중 시작';
   const snoozeLabel = devMode ? '5초 더...' : '5분 더...';
 
-  // NOW! image size and exclamation marks scale with level
-  const nowImageWidth = level <= 1 ? SCREEN_WIDTH * 0.55 : level === 2 ? SCREEN_WIDTH * 0.7 : SCREEN_WIDTH * 0.85;
-  const extraBangs = level <= 1 ? '' : level === 2 ? '!' : '!!!';
+  // Letter size scales with level — bang count increases
+  const letterH = level <= 1 ? 64 : level === 2 ? 80 : 96;
+  const bangCount = level <= 1 ? 1 : level === 2 ? 2 : Math.min(level, 7);
 
   // Pulse animation for Lv.3+
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -307,22 +307,20 @@ export function NowAlertOverlay({ type }: NowAlertOverlayProps) {
           <CookingTomatoes level={level} />
         </View>
 
-        {/* NOW!! image + extra bangs — scales up with level */}
+        {/* NOW!! composed from individual letter images — bangs increase with level */}
         <Animated.View style={[styles.nowTextContainer, { transform: [{ scale: pulseAnim }] }]}>
           <View style={styles.nowImageRow}>
-            <Image
-              source={require('@/../assets/images/now_text.png')}
-              style={[styles.nowImage, { width: nowImageWidth, height: nowImageWidth * 0.45 }]}
-              resizeMode="contain"
-            />
-            {extraBangs.length > 0 && (
-              <Text style={[styles.extraBangs, {
-                fontSize: level === 2 ? 48 : 60,
-                color: level >= 3 ? '#dc2626' : '#e8573a',
-              }]}>
-                {extraBangs}
-              </Text>
-            )}
+            <Image source={require('@/../assets/images/Now_N.png')} style={{ height: letterH, width: letterH * 0.85 }} resizeMode="contain" />
+            <Image source={require('@/../assets/images/Now_O.png')} style={{ height: letterH, width: letterH * 0.85 }} resizeMode="contain" />
+            <Image source={require('@/../assets/images/Now_W.png')} style={{ height: letterH, width: letterH * 1.05 }} resizeMode="contain" />
+            {Array.from({ length: bangCount }).map((_, i) => (
+              <Image
+                key={i}
+                source={require('@/../assets/images/Now_bang.png')}
+                style={{ height: letterH, width: letterH * 0.38, marginLeft: i === 0 ? 2 : -4 }}
+                resizeMode="contain"
+              />
+            ))}
           </View>
         </Animated.View>
 
@@ -433,18 +431,8 @@ const styles = StyleSheet.create({
   },
   nowImageRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     justifyContent: 'center',
-  },
-  nowImage: {
-    // width/height set dynamically per level
-  },
-  extraBangs: {
-    fontFamily: 'KotraBold',
-    marginLeft: -8,
-    textShadowColor: 'rgba(0,0,0,0.3)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 6,
   },
   content: {
     flex: 1,
