@@ -21,16 +21,25 @@ const CANVAS_SIZE = SCREEN_WIDTH - 32;
 /* ── 40-color palette (5 rows × 8) ── */
 
 const PALETTE: string[] = [
-  // Grayscale
+  // Grayscale (8)
   '#000000', '#3A3A3A', '#666666', '#8C8C8C', '#B5B5B5', '#D9D9D9', '#F0F0F0', '#FFFFFF',
-  // Warm — reds, oranges, yellows
-  '#8B1A1A', '#DC2626', '#E8573A', '#F97316', '#FB923C', '#FBBF24', '#FACC15', '#FDE047',
-  // Cool — greens, teals, blues
-  '#0E5F3B', '#0E7B5F', '#059669', '#14B8A6', '#0EA5E9', '#3B82F6', '#1D4ED8', '#1E3A5F',
-  // Purples & pinks
-  '#581C87', '#7C3AED', '#8B5CF6', '#A855F7', '#C026D3', '#DB2777', '#EC4899', '#F472B6',
-  // Skin & earth tones
-  '#2D1B0E', '#6B3410', '#92400E', '#B45309', '#D4A574', '#FFB88C', '#FDDCB5', '#FDE8D0',
+  // Reds (8)
+  '#8B1A1A', '#B91C1C', '#DC2626', '#EF4444', '#F87171', '#FCA5A5', '#FECACA', '#FEE2E2',
+  // Oranges (6) + Yellows (6) = 12
+  '#C2410C', '#EA580C', '#F97316', '#FB923C', '#FDBA74', '#FED7AA',
+  '#A16207', '#CA8A04', '#EAB308', '#FACC15', '#FDE047', '#FEF08A',
+  // Greens (8)
+  '#14532D', '#166534', '#15803D', '#22C55E', '#4ADE80', '#86EFAC', '#BBF7D0', '#DCFCE7',
+  // Teals (4) + Blues (8) = 12
+  '#0D9488', '#14B8A6', '#2DD4BF', '#99F6E4',
+  '#1E3A5F', '#1D4ED8', '#2563EB', '#3B82F6', '#60A5FA', '#93C5FD', '#BFDBFE', '#DBEAFE',
+  // Purples (6) + Pinks (6) = 12
+  '#581C87', '#7C3AED', '#8B5CF6', '#A855F7', '#C084FC', '#E9D5FF',
+  '#9D174D', '#DB2777', '#EC4899', '#F472B6', '#F9A8D4', '#FBCFE8',
+  // Browns/Skin tones (8)
+  '#2D1B0E', '#6B3410', '#92400E', '#B45309', '#D4A574', '#E8B896', '#FDDCB5', '#FDE8D0',
+  // Extra accents (4)
+  '#E8573A', '#059669', '#0EA5E9', '#C026D3',
 ];
 
 /* ── 16→32 upscale (for legacy avatar data migration) ── */
