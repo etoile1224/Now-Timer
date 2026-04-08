@@ -1,6 +1,9 @@
 import jwt from 'jsonwebtoken';
 
-const SECRET = process.env.JWT_SECRET || 'now-timer-dev-secret-change-in-production';
+if (!process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET environment variable is required');
+}
+const SECRET = process.env.JWT_SECRET;
 const EXPIRY = '30d';
 
 export interface TokenPayload {
