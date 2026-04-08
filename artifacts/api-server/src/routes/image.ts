@@ -55,12 +55,14 @@ function colorDist(r: number, g: number, b: number, pi: number): number {
   const ds = s - ps;
   const dl = l - pl;
 
-  // Combine: heavily weight hue to preserve color identity
-  // Only apply hue weight when both colors have enough saturation
+  // Penalize grayscale palette matches when pixel has color
   const minSat = Math.min(s, ps);
-  const hueWeight = minSat > 0.1 ? 8000 : 0;
+  const hueWeight = minSat > 0.05 ? 10000 : 0;
 
-  return rgbDist + hueWeight * dh * dh + 3000 * ds * ds + 2000 * dl * dl;
+  // If pixel has saturation but palette color is grayscale, add penalty
+  const grayPenalty = (s > 0.08 && ps < 0.05) ? 5000 : 0;
+
+  return rgbDist + hueWeight * dh * dh + 3000 * ds * ds + 2000 * dl * dl + grayPenalty;
 }
 
 /** Find closest palette color */
@@ -88,7 +90,7 @@ router.post("/convert-photo", async (req: Request, res: Response) => {
     // Boost saturation and contrast before resizing for better color preservation
     const { data, info } = await sharp(buffer)
       .resize(GRID_SIZE, GRID_SIZE, { fit: "cover", position: "centre" })
-      .modulate({ saturation: 1.4 })
+      .modulate({ saturation: 1.8 })
       .ensureAlpha()
       .raw()
       .toBuffer({ resolveWithObject: true });

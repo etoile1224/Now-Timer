@@ -246,7 +246,7 @@ function AvatarSection() {
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
         base64: true,
-        quality: 0.1,
+        quality: 0.7,
         allowsEditing: true,
         aspect: [1, 1],
       });
