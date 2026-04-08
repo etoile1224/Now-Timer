@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   Modal,
   Image,
   Dimensions,
+  Animated,
 } from 'react-native';
 import { useTimer } from '@/context/TimerContext';
 
@@ -265,8 +266,26 @@ export function NowAlertOverlay({ type }: NowAlertOverlayProps) {
   const dismissLabel = isWork ? '확인 — 쉬러 갈게요' : '확인 — 집중 시작';
   const snoozeLabel = devMode ? '5초 더...' : '5분 더...';
 
-  // Generate NOW! text — more exclamation marks with higher level
-  const nowExclamation = level <= 1 ? '!' : level === 2 ? '!!' : '!!!!!!!';
+  // NOW! image size and exclamation marks scale with level
+  const nowImageWidth = level <= 1 ? SCREEN_WIDTH * 0.55 : level === 2 ? SCREEN_WIDTH * 0.7 : SCREEN_WIDTH * 0.85;
+  const extraBangs = level <= 1 ? '' : level === 2 ? '!' : '!!!';
+
+  // Pulse animation for Lv.3+
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (level >= 3) {
+      const pulse = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, { toValue: 1.08, duration: 300, useNativeDriver: true }),
+          Animated.timing(pulseAnim, { toValue: 0.95, duration: 300, useNativeDriver: true }),
+        ])
+      );
+      pulse.start();
+      return () => pulse.stop();
+    } else {
+      pulseAnim.setValue(1);
+    }
+  }, [level, pulseAnim]);
 
   return (
     <Modal
@@ -288,12 +307,24 @@ export function NowAlertOverlay({ type }: NowAlertOverlayProps) {
           <CookingTomatoes level={level} />
         </View>
 
-        {/* NOW! text overlaid on the cooking area */}
-        <View style={styles.nowTextContainer}>
-          <Text style={styles.nowText}>
-            {'NOW'}{nowExclamation}
-          </Text>
-        </View>
+        {/* NOW!! image + extra bangs — scales up with level */}
+        <Animated.View style={[styles.nowTextContainer, { transform: [{ scale: pulseAnim }] }]}>
+          <View style={styles.nowImageRow}>
+            <Image
+              source={require('@/../assets/images/now_text.png')}
+              style={[styles.nowImage, { width: nowImageWidth, height: nowImageWidth * 0.45 }]}
+              resizeMode="contain"
+            />
+            {extraBangs.length > 0 && (
+              <Text style={[styles.extraBangs, {
+                fontSize: level === 2 ? 48 : 60,
+                color: level >= 3 ? '#dc2626' : '#e8573a',
+              }]}>
+                {extraBangs}
+              </Text>
+            )}
+          </View>
+        </Animated.View>
 
         {/* Content overlaid on bottom */}
         <View style={styles.content}>
@@ -394,20 +425,26 @@ const styles = StyleSheet.create({
   },
   nowTextContainer: {
     position: 'absolute',
-    top: SCREEN_HEIGHT * 0.34,
+    top: SCREEN_HEIGHT * 0.30,
     left: 0,
     right: 0,
     alignItems: 'center',
     zIndex: 10,
   },
-  nowText: {
+  nowImageRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  nowImage: {
+    // width/height set dynamically per level
+  },
+  extraBangs: {
     fontFamily: 'KotraBold',
-    fontSize: 52,
-    color: '#ffffff',
-    textShadowColor: 'rgba(0,0,0,0.4)',
-    textShadowOffset: { width: 0, height: 3 },
-    textShadowRadius: 8,
-    letterSpacing: 2,
+    marginLeft: -8,
+    textShadowColor: 'rgba(0,0,0,0.3)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 6,
   },
   content: {
     flex: 1,
