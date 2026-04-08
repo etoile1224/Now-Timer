@@ -19,61 +19,97 @@ function hexToRgb(hex: string): [number, number, number] {
   return [(n >> 16) & 0xff, (n >> 8) & 0xff, n & 0xff];
 }
 
-/** Convert RGB to HSL for better perceptual matching */
-function rgbToHsl(r: number, g: number, b: number): [number, number, number] {
-  r /= 255; g /= 255; b /= 255;
-  const max = Math.max(r, g, b), min = Math.min(r, g, b);
-  const l = (max + min) / 2;
-  if (max === min) return [0, 0, l];
-  const d = max - min;
-  const s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-  let h = 0;
-  if (max === r) h = ((g - b) / d + (g < b ? 6 : 0)) / 6;
-  else if (max === g) h = ((b - r) / d + 2) / 6;
-  else h = ((r - g) / d + 4) / 6;
-  return [h, s, l];
+/** Convert RGB to CIE Lab for perceptually uniform color matching */
+function rgbToLab(r: number, g: number, b: number): [number, number, number] {
+  // sRGB → linear
+  let rl = r / 255, gl = g / 255, bl = b / 255;
+  rl = rl > 0.04045 ? Math.pow((rl + 0.055) / 1.055, 2.4) : rl / 12.92;
+  gl = gl > 0.04045 ? Math.pow((gl + 0.055) / 1.055, 2.4) : gl / 12.92;
+  bl = bl > 0.04045 ? Math.pow((bl + 0.055) / 1.055, 2.4) : bl / 12.92;
+
+  // linear RGB → XYZ (D65)
+  let x = (0.4124564 * rl + 0.3575761 * gl + 0.1804375 * bl) / 0.95047;
+  let y = (0.2126729 * rl + 0.7151522 * gl + 0.0721750 * bl) / 1.00000;
+  let z = (0.0193339 * rl + 0.1191920 * gl + 0.9503041 * bl) / 1.08883;
+
+  const f = (t: number) => t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116;
+  x = f(x); y = f(y); z = f(z);
+
+  return [116 * y - 16, 500 * (x - y), 200 * (y - z)];
 }
 
 const PALETTE_RGB = PALETTE.map(hexToRgb);
-const PALETTE_HSL = PALETTE_RGB.map(([r, g, b]) => rgbToHsl(r, g, b));
+const PALETTE_LAB = PALETTE_RGB.map(([r, g, b]) => rgbToLab(r, g, b));
 
-/** Perceptual distance combining RGB + HSL for color accuracy */
-function colorDist(r: number, g: number, b: number, pi: number): number {
-  const [pr, pg, pb] = PALETTE_RGB[pi];
-  const [ph, ps, pl] = PALETTE_HSL[pi];
-  const [h, s, l] = rgbToHsl(r, g, b);
-
-  // RGB component (weighted for human vision)
-  const dr = r - pr, dg = g - pg, db = b - pb;
-  const rgbDist = 2 * dr * dr + 4 * dg * dg + 3 * db * db;
-
-  // Hue distance (circular, 0-1 range)
-  let dh = Math.abs(h - ph);
-  if (dh > 0.5) dh = 1 - dh;
-
-  // Saturation and lightness distance
-  const ds = s - ps;
-  const dl = l - pl;
-
-  // Penalize grayscale palette matches when pixel has color
-  const minSat = Math.min(s, ps);
-  const hueWeight = minSat > 0.05 ? 10000 : 0;
-
-  // If pixel has saturation but palette color is grayscale, add penalty
-  const grayPenalty = (s > 0.08 && ps < 0.05) ? 5000 : 0;
-
-  return rgbDist + hueWeight * dh * dh + 3000 * ds * ds + 2000 * dl * dl + grayPenalty;
+/** CIEDE2000-simplified distance in Lab space */
+function colorDistLab(L: number, a: number, b: number, pi: number): number {
+  const [pL, pa, pb] = PALETTE_LAB[pi];
+  const dL = L - pL;
+  const da = a - pa;
+  const db = b - pb;
+  // Weighted Lab distance — give extra weight to chroma (a,b) to preserve color
+  return dL * dL + 1.5 * da * da + 1.5 * db * db;
 }
 
-/** Find closest palette color */
+/** Find closest palette color using Lab space */
 function closestColor(r: number, g: number, b: number): string {
+  const [L, a, bVal] = rgbToLab(r, g, b);
   let best = 0;
   let bestDist = Infinity;
-  for (let i = 0; i < PALETTE_RGB.length; i++) {
-    const d = colorDist(r, g, b, i);
+  for (let i = 0; i < PALETTE_LAB.length; i++) {
+    const d = colorDistLab(L, a, bVal, i);
     if (d < bestDist) { bestDist = d; best = i; }
   }
   return PALETTE[best];
+}
+
+/** Floyd-Steinberg dithering for smoother gradients */
+function ditherGrid(
+  pixels: Float64Array, w: number, h: number
+): (string | null)[][] {
+  // pixels: RGBA float array (0-255 range), length = w*h*4
+  const grid: (string | null)[][] = [];
+
+  for (let y = 0; y < h; y++) {
+    const row: (string | null)[] = [];
+    for (let x = 0; x < w; x++) {
+      const idx = (y * w + x) * 4;
+      const r = Math.max(0, Math.min(255, pixels[idx]));
+      const g = Math.max(0, Math.min(255, pixels[idx + 1]));
+      const b = Math.max(0, Math.min(255, pixels[idx + 2]));
+      const a = pixels[idx + 3];
+
+      if (a < 128) {
+        row.push(null);
+        continue;
+      }
+
+      // Find closest palette color
+      const color = closestColor(Math.round(r), Math.round(g), Math.round(b));
+      row.push(color);
+
+      // Compute quantization error
+      const [pr, pg, pb] = hexToRgb(color);
+      const er = r - pr, eg = g - pg, eb = b - pb;
+
+      // Distribute error to neighbors (Floyd-Steinberg)
+      const spread = (dx: number, dy: number, factor: number) => {
+        const nx = x + dx, ny = y + dy;
+        if (nx >= 0 && nx < w && ny < h) {
+          const ni = (ny * w + nx) * 4;
+          pixels[ni] += er * factor;
+          pixels[ni + 1] += eg * factor;
+          pixels[ni + 2] += eb * factor;
+        }
+      };
+      spread(1, 0, 7 / 16);
+      spread(-1, 1, 3 / 16);
+      spread(0, 1, 5 / 16);
+      spread(1, 1, 1 / 16);
+    }
+    grid.push(row);
+  }
+  return grid;
 }
 
 router.post("/convert-photo", async (req: Request, res: Response) => {
@@ -87,27 +123,27 @@ router.post("/convert-photo", async (req: Request, res: Response) => {
     const base64Data = image.replace(/^data:image\/\w+;base64,/, "");
     const buffer = Buffer.from(base64Data, "base64");
 
-    // Boost saturation and contrast before resizing for better color preservation
-    const { data, info } = await sharp(buffer)
-      .resize(GRID_SIZE, GRID_SIZE, { fit: "cover", position: "centre" })
-      .modulate({ saturation: 1.8 })
+    // Process at 2x then downscale for better detail, boost saturation + contrast
+    const intermediate = await sharp(buffer)
+      .resize(GRID_SIZE * 2, GRID_SIZE * 2, { fit: "cover", position: "centre" })
+      .modulate({ saturation: 2.0, brightness: 1.05 })
+      .linear(1.2, -25) // contrast boost
+      .sharpen({ sigma: 1.5 })
+      .toBuffer();
+
+    const { data, info } = await sharp(intermediate)
+      .resize(GRID_SIZE, GRID_SIZE, { fit: "cover", kernel: "lanczos3" })
       .ensureAlpha()
       .raw()
       .toBuffer({ resolveWithObject: true });
 
-    const grid: (string | null)[][] = [];
-    for (let y = 0; y < info.height; y++) {
-      const row: (string | null)[] = [];
-      for (let x = 0; x < info.width; x++) {
-        const idx = (y * info.width + x) * 4;
-        const r = data[idx];
-        const g = data[idx + 1];
-        const b = data[idx + 2];
-        const a = data[idx + 3];
-        row.push(a < 128 ? null : closestColor(r, g, b));
-      }
-      grid.push(row);
+    // Copy to float array for dithering
+    const pixels = new Float64Array(info.width * info.height * 4);
+    for (let i = 0; i < data.length; i++) {
+      pixels[i] = data[i];
     }
+
+    const grid = ditherGrid(pixels, info.width, info.height);
 
     res.json({ grid });
   } catch (err) {
