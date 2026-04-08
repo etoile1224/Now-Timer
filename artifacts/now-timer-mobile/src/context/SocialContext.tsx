@@ -212,7 +212,7 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
     registerForPushNotifications().then((pushToken) => {
       if (!pushToken) return;
       for (const m of memberships) {
-        api.registerPushToken(m.memberId, pushToken, m.token).catch(() => {});
+        api.registerPushToken(m.memberId, pushToken, m.token).catch((e) => console.warn('push token register failed', e));
       }
     });
 
@@ -284,7 +284,7 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
     }
 
     for (const m of membershipsRef.current) {
-      api.updateStatus(m.memberId, phase, ignoreLevel, m.token, reactionMs).catch(() => {});
+      api.updateStatus(m.memberId, phase, ignoreLevel, m.token, reactionMs).catch((e) => console.warn('status update failed', e));
     }
   }, [phase, ignoreLevel]);
 
@@ -297,7 +297,7 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
     setAllMembers((prev) => ({ ...prev, [code]: team.members }));
     setActiveCode(code);
     setActiveTeamCodeState(code);
-    linkMembership(m).catch(() => {});
+    linkMembership(m).catch((e) => console.warn('link membership failed', e));
     return code;
   }, [linkMembership]);
 
@@ -313,7 +313,7 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
     setAllMembers((prev) => ({ ...prev, [upper]: team.members }));
     setActiveCode(upper);
     setActiveTeamCodeState(upper);
-    linkMembership(m).catch(() => {});
+    linkMembership(m).catch((e) => console.warn('link membership failed', e));
   }, [linkMembership]);
 
   const leaveTeam = useCallback((code: string) => {
@@ -332,7 +332,7 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
     });
     const newActive = getActiveCode() || remaining[0]?.code || null;
     setActiveTeamCodeState(newActive);
-    unlinkMembership(code).catch(() => {});
+    unlinkMembership(code).catch((e) => console.warn('unlink membership failed', e));
   }, [unlinkMembership]);
 
   const renameTeam = useCallback(async (code: string, name: string): Promise<void> => {
@@ -347,7 +347,7 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
     (toId: string) => {
       const m = membershipsRef.current.find((x) => x.code === activeTeamCode);
       if (!m) return;
-      api.poke(m.memberId, toId, m.token).catch(() => {});
+      api.poke(m.memberId, toId, m.token).catch((e) => console.warn('poke failed', e));
     },
     [activeTeamCode],
   );

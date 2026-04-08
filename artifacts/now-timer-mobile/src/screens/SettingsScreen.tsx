@@ -237,7 +237,7 @@ function AvatarSection() {
     const data = JSON.stringify(newGrid);
     await AsyncStorage.setItem(AVATAR_KEY, data);
     for (const m of memberships) {
-      api.updateAvatar(m.memberId, data, m.token).catch(() => {});
+      api.updateAvatar(m.memberId, data, m.token).catch((e) => console.warn('avatar sync failed', e));
     }
   }, [memberships]);
 
@@ -327,7 +327,7 @@ function VoicePokeSection() {
     setAudioBase64(base64);
     await AsyncStorage.setItem(VOICE_KEY, base64);
     if (authToken) {
-      api.uploadUserVoice(authToken, base64).catch(() => {});
+      api.uploadUserVoice(authToken, base64).catch((e) => console.warn('voice upload failed', e));
     }
   }, [authToken]);
 
@@ -335,7 +335,7 @@ function VoicePokeSection() {
     setAudioBase64(null);
     await AsyncStorage.removeItem(VOICE_KEY);
     if (authToken) {
-      api.deleteUserVoice(authToken).catch(() => {});
+      api.deleteUserVoice(authToken).catch((e) => console.warn('voice delete failed', e));
     }
   }, [authToken]);
 
