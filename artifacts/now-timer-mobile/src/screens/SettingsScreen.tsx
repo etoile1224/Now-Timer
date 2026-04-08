@@ -9,12 +9,9 @@ import {
   Image,
   TextInput,
   PanResponder,
-  ActivityIndicator,
-  Alert,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as ImagePicker from 'expo-image-picker';
 import {
   Eye,
   EyeOff,
@@ -25,7 +22,6 @@ import {
   LogOut,
   BellOff,
   Bell,
-  Camera,
 } from 'lucide-react-native';
 import { useTimer } from '@/context/TimerContext';
 import { useAuth } from '@/context/AuthContext';
@@ -218,8 +214,6 @@ function AvatarSection() {
   const { memberships } = useSocial();
   const [grid, setGrid] = useState<(string | null)[][]>(createEmptyGrid);
   const [editorVisible, setEditorVisible] = useState(false);
-  const [converting, setConverting] = useState(false);
-
   useEffect(() => {
     AsyncStorage.getItem(AVATAR_KEY).then((val) => {
       if (val) {
@@ -241,26 +235,6 @@ function AvatarSection() {
     }
   }, [memberships]);
 
-  const handlePhotoImport = useCallback(async () => {
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ['images'],
-        base64: true,
-        quality: 0.5,
-      });
-      if (result.canceled || !result.assets[0].base64) return;
-
-      setConverting(true);
-      const { grid: converted } = await api.convertPhoto(result.assets[0].base64);
-      setConverting(false);
-      setGrid(converted);
-      setEditorVisible(true);
-    } catch {
-      setConverting(false);
-      Alert.alert('\uBCC0\uD658 \uC2E4\uD328', '\uC0AC\uC9C4\uC744 \uBCC0\uD658\uD558\uC9C0 \uBABB\uD588\uC5B4\uC694. \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694.');
-    }
-  }, []);
-
   const isEmpty = grid.every(row => row.every(c => c === null));
 
   return (
@@ -275,20 +249,6 @@ function AvatarSection() {
           <Text style={styles.smallButtonText}>
             {isEmpty ? '\uC544\uBC14\uD0C0 \uB9CC\uB4E4\uAE30' : '\uC218\uC815\uD558\uAE30'}
           </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={handlePhotoImport}
-          style={styles.smallButton}
-          disabled={converting}
-        >
-          {converting ? (
-            <ActivityIndicator size="small" color={colors.tomato} />
-          ) : (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Camera size={14} color={colors.foreground} />
-              <Text style={styles.smallButtonText}>{'\uC0AC\uC9C4\uC73C\uB85C \uB9CC\uB4E4\uAE30'}</Text>
-            </View>
-          )}
         </TouchableOpacity>
       </View>
       <PixelEditorModal
