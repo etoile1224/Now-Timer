@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,8 @@ import {
   Switch,
   StyleSheet,
   Image,
+  TextInput,
+  PanResponder,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -18,6 +20,8 @@ import {
   FlaskConical,
   Play,
   LogOut,
+  BellOff,
+  Bell,
 } from 'lucide-react-native';
 import { useTimer } from '@/context/TimerContext';
 import { useAuth } from '@/context/AuthContext';
@@ -39,6 +43,52 @@ interface NumberInputProps {
 }
 
 function NumberInput({ label, value, min, max, unit = '\uBD84', onChange }: NumberInputProps) {
+  const [editing, setEditing] = useState(false);
+  const [editText, setEditText] = useState(String(value));
+  const accumulatedDelta = useRef(0);
+  const currentValue = useRef(value);
+
+  useEffect(() => {
+    currentValue.current = value;
+    if (!editing) setEditText(String(value));
+  }, [value, editing]);
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, gs) => Math.abs(gs.dy) > 5,
+      onPanResponderGrant: () => {
+        accumulatedDelta.current = 0;
+      },
+      onPanResponderMove: (_, gs) => {
+        const steps = Math.round(-gs.dy / 12);
+        const diff = steps - accumulatedDelta.current;
+        if (diff !== 0) {
+          accumulatedDelta.current = steps;
+          const next = Math.min(max, Math.max(min, currentValue.current + diff));
+          if (next !== currentValue.current) {
+            currentValue.current = next;
+            onChange(next);
+          }
+        }
+      },
+      onPanResponderRelease: (_, gs) => {
+        if (Math.abs(gs.dy) < 5 && Math.abs(gs.dx) < 5) {
+          setEditing(true);
+          setEditText(String(currentValue.current));
+        }
+      },
+    }),
+  ).current;
+
+  const commitEdit = () => {
+    setEditing(false);
+    const num = parseInt(editText, 10);
+    if (!isNaN(num)) {
+      onChange(Math.min(max, Math.max(min, num)));
+    }
+  };
+
   return (
     <View style={numStyles.row}>
       <Text style={numStyles.label}>{label}</Text>
@@ -50,9 +100,25 @@ function NumberInput({ label, value, min, max, unit = '\uBD84', onChange }: Numb
         >
           <Text style={numStyles.buttonText}>{'\u2212'}</Text>
         </TouchableOpacity>
-        <View style={numStyles.valueBox}>
-          <Text style={numStyles.valueText}>{value}</Text>
-        </View>
+        {editing ? (
+          <View style={[numStyles.valueBox, numStyles.valueBoxEditing]}>
+            <TextInput
+              style={numStyles.valueInput}
+              value={editText}
+              onChangeText={setEditText}
+              keyboardType="number-pad"
+              autoFocus
+              selectTextOnFocus
+              onBlur={commitEdit}
+              onSubmitEditing={commitEdit}
+              returnKeyType="done"
+            />
+          </View>
+        ) : (
+          <View style={numStyles.valueBox} {...panResponder.panHandlers}>
+            <Text style={numStyles.valueText}>{value}</Text>
+          </View>
+        )}
         <TouchableOpacity
           onPress={() => onChange(Math.min(max, value + 1))}
           style={numStyles.button}
@@ -109,10 +175,23 @@ const numStyles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
+  valueBoxEditing: {
+    borderColor: colors.tomato,
+    borderWidth: 1.5,
+  },
   valueText: {
     fontSize: 14,
     fontFamily: 'Komputa-Bold',
     color: colors.foreground,
+  },
+  valueInput: {
+    fontSize: 14,
+    fontFamily: 'Komputa-Bold',
+    color: colors.foreground,
+    textAlign: 'center',
+    padding: 0,
+    width: 40,
+    height: 20,
   },
   unit: {
     fontSize: 13,
@@ -377,6 +456,39 @@ export function SettingsScreen() {
               thumbColor="#fff"
             />
           </View>
+        </View>
+
+        {/* Do Not Disturb */}
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>{'\uBC29\uD574\uAE08\uC9C0'}</Text>
+          <View style={styles.toggleRow}>
+            <View style={styles.toggleLeft}>
+              {settings.doNotDisturb ? (
+                <BellOff size={18} color={colors.tomato} />
+              ) : (
+                <Bell size={18} color={colors.mutedForeground} />
+              )}
+              <View style={styles.toggleTextCol}>
+                <Text style={styles.toggleLabel}>{'\uC54C\uB9BC \uB044\uAE30'}</Text>
+                <Text style={styles.toggleDesc}>
+                  {settings.doNotDisturb
+                    ? '\uD300\uC6D0 \uC54C\uB9BC/\uD3EC\uD06C\uB97C \uBC1B\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4'
+                    : '\uD300\uC6D0 \uB300\uAE30/\uD3EC\uD06C \uB4F1 \uC54C\uB9BC\uC744 \uBC1B\uC2B5\uB2C8\uB2E4'}
+                </Text>
+              </View>
+            </View>
+            <Switch
+              value={settings.doNotDisturb}
+              onValueChange={(v) => updateSettings({ doNotDisturb: v })}
+              trackColor={{ false: colors.cream, true: colors.tomato }}
+              thumbColor="#fff"
+            />
+          </View>
+          {settings.doNotDisturb && (
+            <Text style={[styles.sectionDesc, { marginTop: 8, marginBottom: 0 }]}>
+              {'\uD0C0\uC774\uBA38 \uC54C\uB9BC(NOW! Alert)\uC740 \uC815\uC0C1\uC801\uC73C\uB85C \uC6B8\uB9BD\uB2C8\uB2E4'}
+            </Text>
+          )}
         </View>
 
         {/* Sound section */}

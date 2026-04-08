@@ -54,7 +54,7 @@ export function useSocial(): SocialState {
 
 
 export function SocialProvider({ children }: { children: React.ReactNode }) {
-  const { phase, ignoreLevel } = useTimer();
+  const { phase, ignoreLevel, settings } = useTimer();
   const { user, linkMembership, unlinkMembership } = useAuth();
 
   const [memberships, setMemberships] = useState<Membership[]>(() => {
@@ -88,6 +88,7 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
   const allMembersRef = useRef<Record<string, Record<string, Member>>>({});
   const phaseRef = useRef(phase);
   const ignoreLevelRef = useRef(ignoreLevel);
+  const dndRef = useRef(settings.doNotDisturb);
   const prevPhaseForApiRef = useRef(phase);
   const alertStartForApiRef = useRef<number | null>(null);
 
@@ -95,6 +96,7 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => { allMembersRef.current = allMembers; }, [allMembers]);
   useEffect(() => { phaseRef.current = phase; }, [phase]);
   useEffect(() => { ignoreLevelRef.current = ignoreLevel; }, [ignoreLevel]);
+  useEffect(() => { dndRef.current = settings.doNotDisturb; }, [settings.doNotDisturb]);
 
   const setActiveTeamCode = useCallback((code: string) => {
     setActiveCode(code);
@@ -140,7 +142,7 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
             const incoming = event.member;
             const prevLevel = allMembersRef.current[m.code]?.[incoming.id]?.ignoreLevel ?? 0;
 
-            if (incoming.id !== m.memberId && phaseRef.current !== 'focusing') {
+            if (incoming.id !== m.memberId && phaseRef.current !== 'focusing' && !dndRef.current) {
               if (prevLevel < 3 && incoming.ignoreLevel >= 3) {
                 const hasMultiple = membershipsRef.current.length > 1;
                 setPeerAlertMsg(
@@ -173,7 +175,7 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
                 [m.code]: { ...teamMembers, [event.memberId!]: { ...existing, avatarData: event.avatarData! } },
               };
             });
-          } else if (event.type === 'poke' && event.toMemberId === m.memberId) {
+          } else if (event.type === 'poke' && event.toMemberId === m.memberId && !dndRef.current) {
             setPokeFrom(event.fromNickname ?? '\uD300\uC6D0');
             setPokeFromId(event.fromMemberId ?? null);
             setPokeHasVoice(event.hasVoice ?? false);
@@ -226,6 +228,8 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     function handlePushData(data: Record<string, unknown> | undefined) {
       if (!data?.type) return;
+      // 방해금지 모드면 소셜 알림 무시
+      if (dndRef.current) return;
       if (data.type === 'poke') {
         setPokeFrom((data.fromNickname as string) ?? '팀원');
         setPokeFromId((data.fromId as string) ?? null);

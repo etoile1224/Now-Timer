@@ -12,6 +12,7 @@ export interface TimerSettings {
   soundType: SoundType;
   soundVolume: number;
   escalationSpeed: EscalationSpeed;
+  doNotDisturb: boolean;
 }
 
 export const DEFAULT_SETTINGS: TimerSettings = {
@@ -23,6 +24,7 @@ export const DEFAULT_SETTINGS: TimerSettings = {
   soundType: 'ember',
   soundVolume: 0.7,
   escalationSpeed: 'normal',
+  doNotDisturb: false,
 };
 
 const SETTINGS_KEY = 'now-timer-settings';
