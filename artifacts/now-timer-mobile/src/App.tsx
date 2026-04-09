@@ -6,6 +6,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Timer, Users, BarChart2, Settings } from 'lucide-react-native';
 import { useFonts } from 'expo-font';
 import { initStorage } from '@/lib/storage';
+import { I18nProvider, useI18n } from '@/lib/i18n';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { TimerProvider, useTimer } from '@/context/TimerContext';
 import { SocialProvider } from '@/context/SocialContext';
@@ -39,6 +40,7 @@ function NowAlertLayer() {
 }
 
 function MainTabs() {
+  const { t } = useI18n();
   return (
     <Tab.Navigator
       screenOptions={{
@@ -62,7 +64,7 @@ function MainTabs() {
         name="Focus"
         component={FocusScreen}
         options={{
-          tabBarLabel: '몰입',
+          tabBarLabel: t.tab_focus,
           tabBarIcon: ({ color, size }) => <Timer size={size} color={color} />,
         }}
       />
@@ -70,7 +72,7 @@ function MainTabs() {
         name="Social"
         component={SocialScreen}
         options={{
-          tabBarLabel: '소셜',
+          tabBarLabel: t.tab_social,
           tabBarIcon: ({ color, size }) => <Users size={size} color={color} />,
         }}
       />
@@ -78,7 +80,7 @@ function MainTabs() {
         name="Stats"
         component={StatsScreen}
         options={{
-          tabBarLabel: '통계',
+          tabBarLabel: t.tab_stats,
           tabBarIcon: ({ color, size }) => <BarChart2 size={size} color={color} />,
         }}
       />
@@ -86,7 +88,7 @@ function MainTabs() {
         name="Settings"
         component={SettingsScreen}
         options={{
-          tabBarLabel: '설정',
+          tabBarLabel: t.tab_settings,
           tabBarIcon: ({ color, size }) => <Settings size={size} color={color} />,
         }}
       />
@@ -163,9 +165,11 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
+      <I18nProvider>
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
+      </I18nProvider>
     </SafeAreaProvider>
   );
 }

@@ -12,12 +12,14 @@ import {
   ImageBackground,
 } from 'react-native';
 import { useAuth } from '@/context/AuthContext';
+import { useI18n } from '@/lib/i18n';
 import { colors } from '@/lib/colors';
 
 type Mode = 'login' | 'register';
 
 export function LoginScreen() {
   const { login, register } = useAuth();
+  const { t } = useI18n();
   const [mode, setMode] = useState<Mode>('login');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -34,7 +36,7 @@ export function LoginScreen() {
         await register(username.trim(), password);
       }
     } catch (err) {
-      setError((err as Error).message ?? '오류가 발생했어요');
+      setError((err as Error).message ?? t.login_error);
     } finally {
       setLoading(false);
     }
@@ -52,10 +54,10 @@ export function LoginScreen() {
         {/* Form — flat layout, no separate card */}
         <View style={styles.formArea}>
           <Text style={styles.title}>
-            {mode === 'login' ? '로그인' : '회원가입'}
+            {mode === 'login' ? t.login_title : t.login_register}
           </Text>
           <Text style={styles.subtitle}>
-            {mode === 'login' ? '계정에 로그인하세요' : '새 계정을 만드세요'}
+            {mode === 'login' ? t.login_subtitle : t.register_subtitle}
           </Text>
 
           {/* Mode toggle */}
@@ -67,7 +69,7 @@ export function LoginScreen() {
                 style={[styles.modeButton, mode === m && styles.modeButtonActive]}
               >
                 <Text style={[styles.modeButtonText, mode === m && styles.modeButtonTextActive]}>
-                  {m === 'login' ? '로그인' : '회원가입'}
+                  {m === 'login' ? t.login_title : t.login_register}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -75,7 +77,7 @@ export function LoginScreen() {
 
           {/* Form fields */}
           <View style={styles.form}>
-            <Text style={styles.label}>{'아이디'}</Text>
+            <Text style={styles.label}>{t.login_username}</Text>
             <ImageBackground
               source={require('@/../assets/images/input_field.png')}
               style={styles.inputBg}
@@ -86,14 +88,14 @@ export function LoginScreen() {
                 style={styles.input}
                 value={username}
                 onChangeText={setUsername}
-                placeholder="2~20자"
+                placeholder={t.login_placeholder_user}
                 placeholderTextColor={colors.mutedForeground}
                 autoCapitalize="none"
                 autoCorrect={false}
               />
             </ImageBackground>
 
-            <Text style={[styles.label, { marginTop: 12 }]}>{'비밀번호'}</Text>
+            <Text style={[styles.label, { marginTop: 12 }]}>{t.login_password}</Text>
             <ImageBackground
               source={require('@/../assets/images/input_field.png')}
               style={styles.inputBg}
@@ -104,7 +106,7 @@ export function LoginScreen() {
                 style={styles.input}
                 value={password}
                 onChangeText={setPassword}
-                placeholder={mode === 'register' ? '6자 이상' : ''}
+                placeholder={mode === 'register' ? t.login_placeholder_pass : ''}
                 placeholderTextColor={colors.mutedForeground}
                 secureTextEntry
               />
@@ -131,7 +133,7 @@ export function LoginScreen() {
                   <ActivityIndicator color="#fff" />
                 ) : (
                   <Text style={styles.submitText}>
-                    {mode === 'login' ? '로그인' : '시작하기'}
+                    {mode === 'login' ? t.login_submit : t.register_submit}
                   </Text>
                 )}
               </ImageBackground>
@@ -141,13 +143,13 @@ export function LoginScreen() {
           {/* Switch mode */}
           <View style={styles.switchRow}>
             <Text style={styles.switchText}>
-              {mode === 'login' ? '계정이 없으신가요? ' : '이미 계정이 있으신가요? '}
+              {mode === 'login' ? t.login_noAccount : t.login_hasAccount}
             </Text>
             <TouchableOpacity
               onPress={() => { setMode(mode === 'login' ? 'register' : 'login'); setError(null); }}
             >
               <Text style={styles.switchLink}>
-                {mode === 'login' ? '회원가입' : '로그인'}
+                {mode === 'login' ? t.login_register : t.login_title}
               </Text>
             </TouchableOpacity>
           </View>

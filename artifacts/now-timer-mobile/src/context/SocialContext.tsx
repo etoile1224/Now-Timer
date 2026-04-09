@@ -22,6 +22,7 @@ import {
   removeMembership,
   updateMembershipName,
 } from '@/lib/teamStorage';
+import { useI18n, type Translations } from '@/lib/i18n';
 
 interface SocialState {
   memberships: Membership[];
@@ -56,6 +57,9 @@ export function useSocial(): SocialState {
 export function SocialProvider({ children }: { children: React.ReactNode }) {
   const { phase, ignoreLevel, settings } = useTimer();
   const { user, linkMembership, unlinkMembership } = useAuth();
+  const { t } = useI18n();
+  const tRef = useRef<Translations>(t);
+  useEffect(() => { tRef.current = t; }, [t]);
 
   const [memberships, setMemberships] = useState<Membership[]>(() => {
     const local = getMemberships();
@@ -145,19 +149,13 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
             if (incoming.id !== m.memberId && phaseRef.current !== 'focusing' && !dndRef.current) {
               if (prevLevel < 3 && incoming.ignoreLevel >= 3) {
                 const hasMultiple = membershipsRef.current.length > 1;
-                setPeerAlertMsg(
-                  hasMultiple
-                    ? `[${m.code}] ${incoming.nickname}\uB2D8\uC774 NOW! Lv.3\uC744 \uBB34\uC2DC\uD558\uACE0 \uC788\uC5B4\uC694`
-                    : `${incoming.nickname}\uB2D8\uC774 NOW! Lv.3\uC744 \uBB34\uC2DC\uD558\uACE0 \uC788\uC5B4\uC694`,
-                );
+                const msg = tRef.current.social_peerAlert(incoming.nickname, 3);
+                setPeerAlertMsg(hasMultiple ? `[${m.code}] ${msg}` : msg);
                 Vibration.vibrate([120, 60, 120, 60, 280]);
               } else if (prevLevel < 2 && incoming.ignoreLevel >= 2) {
                 const hasMultiple = membershipsRef.current.length > 1;
-                setPeerAlertMsg(
-                  hasMultiple
-                    ? `[${m.code}] ${incoming.nickname}\uB2D8\uC774 NOW! Lv.2\uB97C \uBB34\uC2DC\uD558\uACE0 \uC788\uC5B4\uC694`
-                    : `${incoming.nickname}\uB2D8\uC774 NOW! Lv.2\uB97C \uBB34\uC2DC\uD558\uACE0 \uC788\uC5B4\uC694`,
-                );
+                const msg = tRef.current.social_peerAlert(incoming.nickname, 2);
+                setPeerAlertMsg(hasMultiple ? `[${m.code}] ${msg}` : msg);
               }
             }
 
@@ -176,7 +174,7 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
               };
             });
           } else if (event.type === 'poke' && event.toMemberId === m.memberId && !dndRef.current) {
-            setPokeFrom(event.fromNickname ?? '\uD300\uC6D0');
+            setPokeFrom(event.fromNickname ?? tRef.current.social_teammate);
             setPokeFromId(event.fromMemberId ?? null);
             setPokeHasVoice(event.hasVoice ?? false);
           }
@@ -231,22 +229,21 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
       // 방해금지 모드면 소셜 알림 무시
       if (dndRef.current) return;
       if (data.type === 'poke') {
-        setPokeFrom((data.fromNickname as string) ?? '팀원');
+        setPokeFrom((data.fromNickname as string) ?? tRef.current.social_teammate);
         setPokeFromId((data.fromId as string) ?? null);
         setPokeHasVoice(!!(data.hasVoice));
       } else if (data.type === 'alert') {
-        // 집중 중에는 남의 NOW 무시 알림 차단
         if (phaseRef.current === 'focusing') return;
         const level = (data.level as number) ?? 2;
         const memberId = data.memberId as string | undefined;
-        let nick = '팀원';
+        let nick = tRef.current.social_teammate;
         for (const teamMembers of Object.values(allMembersRef.current)) {
           if (memberId && teamMembers[memberId]) {
             nick = teamMembers[memberId].nickname;
             break;
           }
         }
-        setPeerAlertMsg(`${nick}님이 NOW! Lv.${level}을 무시하고 있어요`);
+        setPeerAlertMsg(tRef.current.social_peerAlert(nick, level));
         Vibration.vibrate([120, 60, 120, 60, 280]);
       }
     }

@@ -10,6 +10,7 @@ import {
   Animated,
 } from 'react-native';
 import { useTimer } from '@/context/TimerContext';
+import { useI18n } from '@/lib/i18n';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -38,7 +39,7 @@ function getLv(level: number): LevelConfig {
       badgeBg: 'rgba(253,224,71,0.8)',
       badgeBorder: '#fef08a',
       badgeText: '#713f12',
-      label: '첫 번째 알림',
+      label: 'lv1',
       showSnooze: true,
     };
   }
@@ -48,7 +49,7 @@ function getLv(level: number): LevelConfig {
       badgeBg: 'rgba(251,146,60,0.8)',
       badgeBorder: '#fdba74',
       badgeText: '#ffffff',
-      label: '무시하는 중...',
+      label: 'lv2',
       showSnooze: true,
     };
   }
@@ -57,7 +58,7 @@ function getLv(level: number): LevelConfig {
     badgeBg: 'rgba(239,68,68,0.8)',
     badgeBorder: '#fca5a5',
     badgeText: '#ffffff',
-    label: '지금 당장요!!',
+    label: 'lv3',
     showSnooze: false,
   };
 }
@@ -67,10 +68,16 @@ function EscalationBar({
   remainingSeconds,
   totalSeconds,
   level,
+  headerLabel,
+  headerUnit,
+  countdownFn,
 }: {
   remainingSeconds: number;
   totalSeconds: number;
   level: number;
+  headerLabel: string;
+  headerUnit: string;
+  countdownFn: (s: number, lv: number) => string;
 }) {
   const barColor =
     level <= 1 ? '#fde047' : level === 2 ? '#fdba74' : '#fca5a5';
@@ -78,8 +85,8 @@ function EscalationBar({
   return (
     <View style={escalationStyles.container}>
       <View style={escalationStyles.headerRow}>
-        <Text style={escalationStyles.headerLabel}>{'무시 로그'}</Text>
-        <Text style={escalationStyles.headerCount}>{level}{'회'}</Text>
+        <Text style={escalationStyles.headerLabel}>{headerLabel}</Text>
+        <Text style={escalationStyles.headerCount}>{level}{headerUnit}</Text>
       </View>
       <View style={escalationStyles.dotsRow}>
         {Array.from({ length: Math.min(level, 12) }).map((_, i) => (
@@ -109,7 +116,7 @@ function EscalationBar({
             />
           </View>
           <Text style={escalationStyles.countdownText}>
-            {remainingSeconds}{'초 후 Lv.'}{level + 1}
+            {countdownFn(remainingSeconds, level + 1)}
           </Text>
         </>
       )}
@@ -255,16 +262,19 @@ export function NowAlertOverlay({ type }: NowAlertOverlayProps) {
   const level = Math.max(1, ignoreLevel);
   const lv = getLv(level);
 
+  const { t } = useI18n();
   const isWork = type === 'work';
+
+  const labelMap = { lv1: t.now_lv1Label, lv2: t.now_lv2Label, lv3: t.now_lv3Label } as Record<string, string>;
 
   const subText = isWork
     ? isLongBreak
-      ? '긴 휴식 시간이에요!'
-      : '쉴 시간이에요'
-    : '다시 집중할 시간이에요!';
+      ? t.now_longBreakTime
+      : t.now_breakTime
+    : t.now_focusTime;
 
-  const dismissLabel = isWork ? '확인 — 쉬러 갈게요' : '확인 — 집중 시작';
-  const snoozeLabel = devMode ? '5초 더...' : '5분 더...';
+  const dismissLabel = isWork ? t.now_dismissWork : t.now_dismissReturn;
+  const snoozeLabel = devMode ? t.now_snooze5s : t.now_snooze5m;
 
   // Letter size scales with level — bang count increases
   const letterH = level <= 1 ? 64 : level === 2 ? 80 : 96;
@@ -337,7 +347,7 @@ export function NowAlertOverlay({ type }: NowAlertOverlayProps) {
               Lv.{level}
             </Text>
             <Text style={[styles.badgeLabelText, { color: lv.badgeText }]}>
-              {lv.label}
+              {labelMap[lv.label] ?? lv.label}
             </Text>
           </View>
 
@@ -346,8 +356,8 @@ export function NowAlertOverlay({ type }: NowAlertOverlayProps) {
 
           {/* Tomato count hint */}
           <Text style={styles.tomatoCountHint}>
-            {'🍅'}{' '}{Math.min(level, 5)}{'개 조리 중'}
-            {level > 5 ? ` (+${level - 5}개 대기)` : ''}
+            {t.now_tomatoCooking(Math.min(level, 5))}
+            {level > 5 ? ` ${t.now_tomatoWaiting(level - 5)}` : ''}
           </Text>
 
           {/* Escalation bar */}
@@ -355,6 +365,9 @@ export function NowAlertOverlay({ type }: NowAlertOverlayProps) {
             remainingSeconds={remainingSeconds}
             totalSeconds={totalSeconds}
             level={level}
+            headerLabel={t.now_ignoreLog}
+            headerUnit={t.now_times}
+            countdownFn={t.now_secsToLv}
           />
 
           {/* Buttons */}
@@ -388,12 +401,12 @@ export function NowAlertOverlay({ type }: NowAlertOverlayProps) {
           {/* Footer hint */}
           {level < 3 && (
             <Text style={styles.footerHint}>
-              {'무시할수록 토마토가 늘어나요 🍅'}
+              {t.now_footerHint}
             </Text>
           )}
           {level >= 3 && (
             <Text style={styles.footerHintStrong}>
-              {'프라이팬이 꽉 찼어요! 지금 바로 확인하세요!'}
+              {t.now_footerStrong}
             </Text>
           )}
         </View>

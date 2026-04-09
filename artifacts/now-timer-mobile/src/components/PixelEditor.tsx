@@ -12,7 +12,8 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Rect, Path } from 'react-native-svg';
 import { colors } from '@/lib/colors';
-import { TEMPLATES } from './pixelTemplates';
+import { useI18n, type Translations } from '@/lib/i18n';
+import { TEMPLATES, TEMPLATE_KEYS } from './pixelTemplates';
 
 const GRID_SIZE = 32;
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -94,6 +95,7 @@ const gridLinePath = (() => {
 
 export function PixelEditorModal({ visible, value, onSave, onCancel }: PixelEditorModalProps) {
   const insets = useSafeAreaInsets();
+  const { t } = useI18n();
   const [grid, setGrid] = useState<(string | null)[][]>(() => value.map(r => [...r]));
   const [selectedColor, setSelectedColor] = useState<string>(PALETTE[0]);
   const [tool, setTool] = useState<Tool>('pen');
@@ -254,11 +256,11 @@ export function PixelEditorModal({ visible, value, onSave, onCancel }: PixelEdit
         {/* ── Header ── */}
         <View style={es.header}>
           <TouchableOpacity onPress={onCancel} style={es.headerBtn}>
-            <Text style={es.headerBtnText}>{'취소'}</Text>
+            <Text style={es.headerBtnText}>{t.pixel_cancel}</Text>
           </TouchableOpacity>
-          <Text style={es.headerTitle}>{'아바타 편집'}</Text>
+          <Text style={es.headerTitle}>{t.pixel_title}</Text>
           <TouchableOpacity onPress={() => onSave(grid)} style={[es.headerBtn, es.headerSaveBtn]}>
-            <Text style={[es.headerBtnText, { color: '#fff' }]}>{'저장'}</Text>
+            <Text style={[es.headerBtnText, { color: '#fff' }]}>{t.pixel_save}</Text>
           </TouchableOpacity>
         </View>
 
@@ -311,24 +313,24 @@ export function PixelEditorModal({ visible, value, onSave, onCancel }: PixelEdit
           {/* Templates */}
           <TouchableOpacity onPress={() => setShowTemplates(v => !v)}>
             <Text style={es.templateToggle}>
-              {showTemplates ? '템플릿 닫기 ▲' : '템플릿으로 시작하기 ▼'}
+              {showTemplates ? t.pixel_templateClose : t.pixel_templateOpen}
             </Text>
           </TouchableOpacity>
           {showTemplates && (
             <View style={es.templateRow}>
-              {TEMPLATES.map(t => (
+              {TEMPLATES.map((tpl, i) => (
                 <TouchableOpacity
-                  key={t.name}
+                  key={TEMPLATE_KEYS[i]}
                   onPress={() => {
-                    const g = t.grid.map(r => [...r]);
+                    const g = tpl.grid.map(r => [...r]);
                     setGrid(g);
                     gridRef.current = g;
                     setShowTemplates(false);
                   }}
                   style={es.templateBtn}
                 >
-                  <Text style={{ fontSize: 20 }}>{t.emoji}</Text>
-                  <Text style={es.templateName}>{t.name}</Text>
+                  <Text style={{ fontSize: 20 }}>{tpl.emoji}</Text>
+                  <Text style={es.templateName}>{(t as any)[TEMPLATE_KEYS[i]]}</Text>
                 </TouchableOpacity>
               ))}
             </View>
@@ -337,23 +339,23 @@ export function PixelEditorModal({ visible, value, onSave, onCancel }: PixelEdit
           {/* Tool bar */}
           <View style={es.toolRow}>
             {([
-              { key: 'pen' as Tool, label: '펜', icon: '✏️' },
-              { key: 'eraser' as Tool, label: '지우개', icon: '🧹' },
-              { key: 'picker' as Tool, label: '스포이드', icon: '💧' },
-            ]).map(t => (
+              { key: 'pen' as Tool, label: t.pixel_pen, icon: '✏️' },
+              { key: 'eraser' as Tool, label: t.pixel_eraser, icon: '🧹' },
+              { key: 'picker' as Tool, label: t.pixel_picker, icon: '💧' },
+            ]).map(toolItem => (
               <TouchableOpacity
-                key={t.key}
-                onPress={() => setTool(t.key)}
-                style={[es.toolBtn, tool === t.key && es.toolBtnActive]}
+                key={toolItem.key}
+                onPress={() => setTool(toolItem.key)}
+                style={[es.toolBtn, tool === toolItem.key && es.toolBtnActive]}
               >
-                <Text style={{ fontSize: 16 }}>{t.icon}</Text>
-                <Text style={[es.toolLabel, tool === t.key && es.toolLabelActive]}>{t.label}</Text>
+                <Text style={{ fontSize: 16 }}>{toolItem.icon}</Text>
+                <Text style={[es.toolLabel, tool === toolItem.key && es.toolLabelActive]}>{toolItem.label}</Text>
               </TouchableOpacity>
             ))}
             <View style={{ flex: 1 }} />
             <TouchableOpacity onPress={() => { setGrid(createEmptyGrid()); gridRef.current = createEmptyGrid(); }} style={es.toolBtn}>
               <Text style={{ fontSize: 16 }}>{'🗑️'}</Text>
-              <Text style={es.toolLabel}>{'전체삭제'}</Text>
+              <Text style={es.toolLabel}>{t.pixel_clear}</Text>
             </TouchableOpacity>
           </View>
 
