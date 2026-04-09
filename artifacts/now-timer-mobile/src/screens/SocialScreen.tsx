@@ -18,34 +18,26 @@ import { useSocial } from '@/context/SocialContext';
 import { playPokeSound, playVoicePoke } from '@/lib/sounds';
 import { api, API_BASE_URL, type Member } from '@/lib/api';
 import { PixelAvatar, parseAvatarData } from '@/components/PixelAvatar';
+import { useI18n, type Translations } from '@/lib/i18n';
 import { colors } from '@/lib/colors';
-
-function pokeParticle(name: string): string {
-  if (!name) return '\uAC00';
-  const code = name.charCodeAt(name.length - 1);
-  if (code >= 0xac00 && code <= 0xd7a3) {
-    return (code - 0xac00) % 28 === 0 ? '\uAC00' : '\uC774';
-  }
-  return '\uAC00';
-}
 
 const MAX_TEAMS = 5;
 
-function statusLabel(m: Member): { text: string; bgColor: string; textColor: string } {
+function statusLabel(m: Member, t: Translations): { text: string; bgColor: string; textColor: string } {
   switch (m.status) {
     case 'focusing':
-      return { text: '\uC9D1\uC911 \uC911', bgColor: colors.blue100, textColor: colors.blue700 };
+      return { text: t.social_statusFocusing, bgColor: colors.blue100, textColor: colors.blue700 };
     case 'breaking':
-      return { text: '\uD734\uC2DD \uC911', bgColor: colors.green100, textColor: colors.green700 };
+      return { text: t.social_statusBreaking, bgColor: colors.green100, textColor: colors.green700 };
     case 'nowAlert':
     case 'returnAlert':
       if (m.ignoreLevel >= 3)
-        return { text: `NOW! Lv.${m.ignoreLevel} \uBB34\uC2DC \uC911`, bgColor: '#fef2f2', textColor: colors.red700 };
+        return { text: t.social_statusNowIgnore(m.ignoreLevel), bgColor: '#fef2f2', textColor: colors.red700 };
       if (m.ignoreLevel === 2)
-        return { text: 'NOW! Lv.2 \uBB34\uC2DC \uC911', bgColor: '#fff7ed', textColor: '#9a3412' };
-      return { text: 'NOW! \uC54C\uB9BC \uC911', bgColor: '#fef9c3', textColor: '#854d0e' };
+        return { text: t.social_statusNowIgnore(2), bgColor: '#fff7ed', textColor: '#9a3412' };
+      return { text: t.social_statusNowAlert, bgColor: '#fef9c3', textColor: '#854d0e' };
     default:
-      return { text: '\uB300\uAE30 \uC911', bgColor: colors.gray100, textColor: colors.gray500 };
+      return { text: t.social_statusIdle, bgColor: colors.gray100, textColor: colors.gray500 };
   }
 }
 
@@ -63,7 +55,8 @@ function MemberCard({
   isMe: boolean;
   onPoke: () => void;
 }) {
-  const { text, bgColor, textColor } = statusLabel(member);
+  const { t } = useI18n();
+  const { text, bgColor, textColor } = statusLabel(member, t);
   const rate = complianceRate(member);
   const canPoke =
     !isMe &&
@@ -90,7 +83,7 @@ function MemberCard({
           <Text style={memberStyles.name} numberOfLines={1}>
             {member.nickname}
           </Text>
-          {isMe && <Text style={memberStyles.meTag}>({'\uB098'})</Text>}
+          {isMe && <Text style={memberStyles.meTag}>{t.social_me}</Text>}
         </View>
         <View style={memberStyles.statusRow}>
           <View style={[memberStyles.statusBadge, { backgroundColor: bgColor }]}>
@@ -111,7 +104,7 @@ function MemberCard({
         >
           <Zap size={12} color={pokeSent ? '#fff' : '#ea580c'} />
           <Text style={[memberStyles.pokeText, pokeSent && { color: '#fff' }]}>
-            {pokeSent ? '\uBCF4\uB0C4!' : '\uAE68\uC6B0\uAE30'}
+            {pokeSent ? t.social_pokeSent : t.social_poke}
           </Text>
         </TouchableOpacity>
       )}
@@ -215,6 +208,7 @@ function TeamStats({
   members: Record<string, Member>;
   myId: string;
 }) {
+  const { t } = useI18n();
   const list = Object.values(members);
   const me = members[myId];
   const totalPokes = list.reduce((s, m) => s + (m.pokeCount ?? 0), 0);
@@ -224,11 +218,11 @@ function TeamStats({
     <View style={teamStatsStyles.row}>
       <View style={teamStatsStyles.statCard}>
         <Text style={teamStatsStyles.statValue}>{totalPokes}</Text>
-        <Text style={teamStatsStyles.statLabel}>{'\uD300 \uAE68\uC6B0\uAE30 \uD69F\uC218'}</Text>
+        <Text style={teamStatsStyles.statLabel}>{t.social_teamPokes}</Text>
       </View>
       <View style={teamStatsStyles.statCard}>
         <Text style={teamStatsStyles.statValue}>{myPokes}</Text>
-        <Text style={teamStatsStyles.statLabel}>{'\uB0B4\uAC00 \uAE68\uC6B4 \uD69F\uC218'}</Text>
+        <Text style={teamStatsStyles.statLabel}>{t.social_myPokes}</Text>
       </View>
     </View>
   );
@@ -263,6 +257,7 @@ const teamStatsStyles = StyleSheet.create({
 
 function TeamView() {
   const { activeTeamCode, memberId, members, memberships, poke, leaveTeam, renameTeam } = useSocial();
+  const { t } = useI18n();
   const [copied, setCopied] = useState(false);
   const [showQr, setShowQr] = useState(false);
   const [editingName, setEditingName] = useState(false);
@@ -309,8 +304,8 @@ function TeamView() {
               <TextInput
                 style={teamStyles.nameEditInput}
                 value={nameInput}
-                onChangeText={(t) => setNameInput(t.slice(0, 30))}
-                placeholder={'팀 이름 입력'}
+                onChangeText={(v) => setNameInput(v.slice(0, 30))}
+                placeholder={t.social_teamNameInput}
                 placeholderTextColor={colors.mutedForeground}
                 autoFocus
                 onSubmitEditing={confirmRename}
@@ -325,14 +320,14 @@ function TeamView() {
           ) : (
             <TouchableOpacity onPress={startRename} style={teamStyles.teamNameBtn} activeOpacity={0.7}>
               <Text style={teamStyles.teamNameText} numberOfLines={1}>
-                {teamName || '팀 이름 설정'}
+                {teamName || t.social_teamName}
               </Text>
               <Pencil size={12} color={colors.mutedForeground} />
             </TouchableOpacity>
           )}
         </View>
 
-        <Text style={teamStyles.codeLabel}>{'\uD300 \uCF54\uB4DC'}</Text>
+        <Text style={teamStyles.codeLabel}>{t.social_teamCode}</Text>
         <View style={teamStyles.codeRow}>
           <Text style={teamStyles.codeText}>{activeTeamCode}</Text>
           <TouchableOpacity
@@ -342,7 +337,7 @@ function TeamView() {
           >
             {copied ? <Check size={14} color={colors.green700} /> : <Copy size={14} color={colors.mutedForeground} />}
             <Text style={[teamStyles.codeButtonText, copied && { color: colors.green700 }]}>
-              {copied ? '\uBCF5\uC0AC\uB428' : '\uBCF5\uC0AC'}
+              {copied ? t.social_copied : t.social_copy}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -359,7 +354,7 @@ function TeamView() {
           </TouchableOpacity>
         </View>
         <Text style={teamStyles.codeHint}>
-          {'\uC774 \uCF54\uB4DC\uB97C \uACF5\uC720\uD574\uC11C \uD300\uC6D0\uC744 \uCD08\uB300\uD558\uC138\uC694'}
+          {t.social_shareHint}
         </Text>
 
         {showQr && joinUrl ? (
@@ -368,7 +363,7 @@ function TeamView() {
               <QRCode value={joinUrl} size={160} />
             </View>
             <Text style={teamStyles.qrHint}>
-              {'QR \uCF54\uB4DC\uB97C \uC2A4\uCE94\uD558\uBA74 \uBC14\uB85C \uD300\uC5D0 \uCC38\uAC00\uD574\uC694'}
+              {t.social_qrHint}
             </Text>
           </View>
         ) : null}
@@ -380,11 +375,11 @@ function TeamView() {
       {/* Members */}
       <View>
         <Text style={teamStyles.membersLabel}>
-          {'\uD300\uC6D0 ('}{memberList.length}{'\uBA85)'}
+          {t.social_members(memberList.length)}
         </Text>
         {memberList.length === 0 && (
           <Text style={teamStyles.emptyText}>
-            {'\uC544\uC9C1 \uD300\uC6D0\uC774 \uC5C6\uC5B4\uC694. \uCF54\uB4DC\uB97C \uACF5\uC720\uD574 \uBCF4\uC138\uC694!'}
+            {t.social_noMembers}
           </Text>
         )}
         {memberList.map((m) => (
@@ -528,6 +523,7 @@ type JoinView = 'landing' | 'create' | 'join';
 
 function AddTeamView({ onCancel }: { onCancel?: () => void }) {
   const { createTeam, joinTeam, memberships } = useSocial();
+  const { t } = useI18n();
   const [view, setView] = useState<JoinView>('landing');
   const [nickname, setNickname] = useState('');
   const [teamNameInput, setTeamNameInput] = useState('');
@@ -538,13 +534,13 @@ function AddTeamView({ onCancel }: { onCancel?: () => void }) {
   const isAddMode = memberships.length > 0;
 
   async function handleCreate() {
-    if (!nickname.trim()) { setError('\uB2C9\uB124\uC784\uC744 \uC785\uB825\uD574 \uC8FC\uC138\uC694'); return; }
+    if (!nickname.trim()) { setError(t.social_errNickname); return; }
     setLoading(true);
     setError('');
     try {
       await createTeam(nickname.trim(), teamNameInput.trim() || undefined);
     } catch {
-      setError('\uD300 \uB9CC\uB4E4\uAE30\uC5D0 \uC2E4\uD328\uD588\uC5B4\uC694. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.');
+      setError(t.social_errCreateFail);
     } finally {
       setLoading(false);
     }
@@ -552,7 +548,7 @@ function AddTeamView({ onCancel }: { onCancel?: () => void }) {
 
   async function handleJoin() {
     if (!code.trim() || !nickname.trim()) {
-      setError('\uD300 \uCF54\uB4DC\uC640 \uB2C9\uB124\uC784\uC744 \uBAA8\uB450 \uC785\uB825\uD574 \uC8FC\uC138\uC694');
+      setError(t.social_errBothRequired);
       return;
     }
     setLoading(true);
@@ -562,9 +558,9 @@ function AddTeamView({ onCancel }: { onCancel?: () => void }) {
       onCancel?.();
     } catch (e: unknown) {
       if (e instanceof Error && e.message === 'already_joined') {
-        setError('\uC774\uBBF8 \uCC38\uAC00\uD55C \uD300\uC774\uC5D0\uC694');
+        setError(t.social_errAlreadyJoined);
       } else {
-        setError('\uD300\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC5B4\uC694. \uCF54\uB4DC\uB97C \uB2E4\uC2DC \uD655\uC778\uD574 \uC8FC\uC138\uC694.');
+        setError(t.social_errNotFound);
       }
     } finally {
       setLoading(false);
@@ -581,12 +577,10 @@ function AddTeamView({ onCancel }: { onCancel?: () => void }) {
         )}
         <View style={addStyles.textCenter}>
           <Text style={addStyles.heading}>
-            {isAddMode ? '\uD300 \uCD94\uAC00\uD558\uAE30' : '\uD300\uC73C\uB85C \uC9D1\uC911\uD558\uAE30'}
+            {isAddMode ? t.social_addTeam : t.social_focusTogether}
           </Text>
           <Text style={addStyles.description}>
-            {isAddMode
-              ? '\uC0C8 \uD300\uC744 \uB9CC\uB4E4\uAC70\uB098 \uAE30\uC874 \uD300 \uCF54\uB4DC\uB85C \uCC38\uAC00\uD558\uC138\uC694'
-              : '\uD300\uC6D0\uB4E4\uACFC NOW! \uC0AC\uC774\uD074\uC744 \uD568\uAED8\uD558\uBA74\n\uD63C\uC790\uBCF4\uB2E4 \uD6E8\uC52C \uC798 \uC9C0\uD0AC \uC218 \uC788\uC5B4\uC694'}
+            {isAddMode ? t.social_addTeamDesc : t.social_focusTogetherDesc}
           </Text>
         </View>
         <View style={addStyles.buttons}>
@@ -595,18 +589,18 @@ function AddTeamView({ onCancel }: { onCancel?: () => void }) {
             style={addStyles.primaryButton}
             activeOpacity={0.8}
           >
-            <Text style={addStyles.primaryButtonText}>{'\uD300 \uB9CC\uB4E4\uAE30'}</Text>
+            <Text style={addStyles.primaryButtonText}>{t.social_createTeam}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => setView('join')}
             style={addStyles.secondaryButton}
             activeOpacity={0.8}
           >
-            <Text style={addStyles.secondaryButtonText}>{'\uCF54\uB4DC\uB85C \uCC38\uAC00\uD558\uAE30'}</Text>
+            <Text style={addStyles.secondaryButtonText}>{t.social_joinByCode}</Text>
           </TouchableOpacity>
           {isAddMode && onCancel && (
             <TouchableOpacity onPress={onCancel}>
-              <Text style={addStyles.cancelText}>{'\uCDE8\uC18C'}</Text>
+              <Text style={addStyles.cancelText}>{t.social_cancel}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -617,22 +611,22 @@ function AddTeamView({ onCancel }: { onCancel?: () => void }) {
   return (
     <View style={addStyles.formContainer}>
       <TouchableOpacity onPress={() => { setView('landing'); setError(''); }}>
-        <Text style={addStyles.backText}>{'\u2190 \uB3CC\uC544\uAC00\uAE30'}</Text>
+        <Text style={addStyles.backText}>{t.social_back}</Text>
       </TouchableOpacity>
 
       <Text style={addStyles.formTitle}>
-        {view === 'create' ? '\uD300 \uB9CC\uB4E4\uAE30' : '\uD300 \uCC38\uAC00\uD558\uAE30'}
+        {view === 'create' ? t.social_createTeam : t.social_joinTeam}
       </Text>
 
       {view === 'create' && (
         <>
-          <Text style={addStyles.inputLabel}>{'팀 이름'}</Text>
+          <Text style={addStyles.inputLabel}>{t.social_teamNameLabel}</Text>
           <TextInput
             style={addStyles.input}
-            placeholder={'예: 스터디 그룹, 개발팀'}
+            placeholder={t.social_teamNamePlaceholder}
             placeholderTextColor={colors.mutedForeground}
             value={teamNameInput}
-            onChangeText={(t) => setTeamNameInput(t.slice(0, 30))}
+            onChangeText={(v) => setTeamNameInput(v.slice(0, 30))}
             autoCorrect={false}
           />
         </>
@@ -640,26 +634,26 @@ function AddTeamView({ onCancel }: { onCancel?: () => void }) {
 
       {view === 'join' && (
         <>
-          <Text style={addStyles.inputLabel}>{'\uD300 \uCF54\uB4DC'}</Text>
+          <Text style={addStyles.inputLabel}>{t.social_teamCode}</Text>
           <TextInput
             style={addStyles.inputCode}
-            placeholder="\uC608: ABC123"
+            placeholder={t.social_teamCodePlaceholder}
             placeholderTextColor={colors.mutedForeground}
             value={code}
-            onChangeText={(t) => setCode(t.toUpperCase().slice(0, 6))}
+            onChangeText={(v) => setCode(v.toUpperCase().slice(0, 6))}
             autoCapitalize="characters"
             autoCorrect={false}
           />
         </>
       )}
 
-      <Text style={addStyles.inputLabel}>{'\uB2C9\uB124\uC784'}</Text>
+      <Text style={addStyles.inputLabel}>{t.social_nickname}</Text>
       <TextInput
         style={addStyles.input}
-        placeholder={'\uD300\uC6D0\uB4E4\uC5D0\uAC8C \uD45C\uC2DC\uB420 \uC774\uB984'}
+        placeholder={t.social_nicknamePlaceholder}
         placeholderTextColor={colors.mutedForeground}
         value={nickname}
-        onChangeText={(t) => setNickname(t.slice(0, 20))}
+        onChangeText={(v) => setNickname(v.slice(0, 20))}
         autoCorrect={false}
       />
 
@@ -675,7 +669,7 @@ function AddTeamView({ onCancel }: { onCancel?: () => void }) {
           <ActivityIndicator color="#fff" />
         ) : (
           <Text style={addStyles.primaryButtonText}>
-            {view === 'create' ? '\uD300 \uB9CC\uB4E4\uAE30' : '\uCC38\uAC00\uD558\uAE30'}
+            {view === 'create' ? t.social_createTeam : t.social_join}
           </Text>
         )}
       </TouchableOpacity>
@@ -830,6 +824,7 @@ export function PeerAlertToast() {
 
 export function PokeToast() {
   const { pokeFrom, pokeFromId, pokeHasVoice, clearPoke } = useSocial();
+  const { t } = useI18n();
 
   useEffect(() => {
     if (!pokeFrom) return;
@@ -859,9 +854,9 @@ export function PokeToast() {
         <Text style={toastStyles.pokeEmoji}>{'\uD83D\uDC4A'}</Text>
         <View style={toastStyles.pokeTextWrap}>
           <Text style={toastStyles.pokeName} numberOfLines={1}>
-            {pokeFrom}{pokeParticle(pokeFrom)} {'\uC7AC\uCD09\uD569\uB2C8\uB2E4!'}
+            {t.social_pokeToast(pokeFrom)}
           </Text>
-          <Text style={toastStyles.pokeDismiss}>{'\uD0ED\uD574\uC11C \uB2EB\uAE30'}</Text>
+          <Text style={toastStyles.pokeDismiss}>{t.social_pokeDismiss}</Text>
         </View>
       </TouchableOpacity>
     </View>
@@ -949,6 +944,7 @@ const toastStyles = StyleSheet.create({
 
 export function SocialScreen() {
   const { memberships, activeTeamCode, setActiveTeamCode } = useSocial();
+  const { t } = useI18n();
   const insets = useSafeAreaInsets();
 
   const hasTeams = memberships.length > 0;
@@ -962,7 +958,7 @@ export function SocialScreen() {
       contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 100 }]}
     >
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>{'\uC18C\uC15C'}</Text>
+        <Text style={styles.headerTitle}>{t.social_title}</Text>
       </View>
 
       {hasTeams && !addingTeam && (

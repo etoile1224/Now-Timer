@@ -12,6 +12,7 @@ const KNOWN_KEYS = [
   'now-timer-active-team',
   'now-timer-sessions-v1',
   'now-timer-reactions-v1',
+  'now-timer-lang',
 ];
 
 export async function initStorage(): Promise<void> {

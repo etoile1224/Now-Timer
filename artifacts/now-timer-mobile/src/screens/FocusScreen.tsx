@@ -11,6 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Eye, EyeOff, FlaskConical } from 'lucide-react-native';
 import Svg, { Path, ClipPath, Rect, Defs } from 'react-native-svg';
 import { useTimer } from '@/context/TimerContext';
+import { useI18n } from '@/lib/i18n';
 import { colors } from '@/lib/colors';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -90,6 +91,7 @@ export function FocusScreen() {
   } = useTimer();
   const insets = useSafeAreaInsets();
 
+  const { t } = useI18n();
   const isIdle = phase === 'idle';
   const isFocusing = phase === 'focusing';
   const isBreaking = phase === 'breaking';
@@ -98,11 +100,11 @@ export function FocusScreen() {
 
   const phaseLabel = isBreaking
     ? isLongBreak
-      ? '긴 휴식 중...'
-      : '휴식 중...'
+      ? t.focus_longBreak
+      : t.focus_break
     : isFocusing
-    ? '집중 중...'
-    : '준비됨';
+    ? t.focus_focusing
+    : t.focus_ready;
 
   const phaseColor = isBreaking
     ? colors.stem
@@ -143,7 +145,7 @@ export function FocusScreen() {
 
         {/* Session info */}
         <Text style={styles.sessionText}>
-          {'세션 '}{sessionCount}{'회 완료'}
+          {t.focus_session(sessionCount)}
         </Text>
 
         {/* Tomato session dots */}
@@ -184,22 +186,20 @@ export function FocusScreen() {
               {formatTime(remainingSeconds)}
             </Text>
           ) : settings.hideTimer && !devMode && (isFocusing || isIdle) ? (
-            <Text style={styles.hintText}>{'타이머 숨김 ON'}</Text>
+            <Text style={styles.hintText}>{t.focus_timerHidden}</Text>
           ) : isBreaking ? (
             <Text style={styles.hintText}>
               {sessionCount > 0 &&
-                `${settings.longBreakInterval - (sessionCount % settings.longBreakInterval)}회 후 긴 휴식`}
+                t.focus_untilLongBreak(settings.longBreakInterval - (sessionCount % settings.longBreakInterval))}
             </Text>
           ) : isIdle ? (
             <Text style={styles.idleHint}>
-              {'시작 버튼을 눌러 '}
-              {devMode ? '5초' : `${settings.workDuration}분`}
-              {' 집중 세션을 시작하세요.'}
+              {t.focus_startHint(devMode ? '5s' : `${settings.workDuration}${t.settings_unit_min}`)}
             </Text>
           ) : null}
           {devMode && (isFocusing || isBreaking) && (
             <Text style={[styles.hintText, { color: colors.amber600 }]}>
-              {'Dev 모드 · 5초 사이클'}
+              {t.focus_devCycle}
             </Text>
           )}
         </View>

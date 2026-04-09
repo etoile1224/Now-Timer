@@ -35,5 +35,11 @@ const TEMPLATE_DATA: TemplateRLE[] = [
   { name: '해파리', emoji: '🪼', colors: ["#7733A0", "#7A1860", "#8830A0", "#8C2878", "#9955C0", "#AA3388", "#B060C0", "#B83890", "#B84898", "#BB4499", "#C84AA0", "#CC55AA", "#D060A8", "#D870B8", "#DD66BB", "#E090CC", "#EAA8D8", "#F0A8D8", "#F4C8E8", "#F8D0EE", "#FDE8F8", "#FFD8F0", "#FFFFFF"], rle: '0x74,2x3,22x6,2x3,0x19,2,22x12,2,0x17,2,22x14,2,0x15,2,21x2,22x11,20x2,18,2,0x13,2,23x2,21x2,22x9,18,20x2,18x2,2,0x11,2,21,23x2,21x3,16x8,18x6,2,0x10,22,21x6,16,17x6,16x3,18x2,14x3,0x9,2,22x2,21x4,17x2,19x6,17x2,16x2,14x4,2,0x8,22x4,21x2,17x3,19x6,17x3,16x2,14x4,0x7,2,22x3,16x3,17x3,19x6,17x3,16x3,14x2,9,2,0x6,22x4,16x3,17x3,19x6,17x3,16x3,14,9x3,0x6,22x4,16x3,17x12,16x3,9x4,0x5,22x5,16x4,17x10,16x4,9x4,2,0x4,22x6,16x5,17x6,16x5,9x4,4x2,0x4,22x4,18x3,16x14,9x3,4x4,0x4,22x3,18x5,16x12,9x3,4x5,0x4,22,18x2,13x8,16,13x4,16,13x8,4x3,0x4,18x3,13,8x21,4x3,0x7,13,11x21,0x10,13x8,0,13x4,0,13x8,0x11,12,0x5,7,0x3,15,0x2,7,0x4,12,0x2,5,0x11,12,0x4,7,0x2,15,0x4,7,0x3,12,0x3,5,0x11,6,0x3,3,0,10,0x5,3,0x2,6,0x4,1,0x11,6,0x2,3,0,10,0x6,3,6,0x6,1,0x11,12,7,0x2,15,0x6,7,12,0x6,5,0x11,12,7,0x3,15,0x4,7,0x2,12,0x5,5,0x11,6,0,3,0x3,10,0x3,3,0x3,6,0x4,1,0x11,6,0x2,3,0x4,10,0x2,3,0x4,6,0x2,1,0x11,12,0x4,7,0x4,15,0,7,0x5,12,0,5,0x11,12,0x5,7,0x5,15,7,0x5,12,5,0x7' },
 ];
 
-export const TEMPLATES: { name: string; emoji: string; grid: (string | null)[][] }[] =
-  TEMPLATE_DATA.map(t => ({ name: t.name, emoji: t.emoji, grid: decodeRLE(t) }));
+export const TEMPLATES: { emoji: string; grid: (string | null)[][] }[] =
+  TEMPLATE_DATA.map(t => ({ emoji: t.emoji, grid: decodeRLE(t) }));
+
+/** i18n keys for template names, aligned with TEMPLATES array order */
+export const TEMPLATE_KEYS: string[] = [
+  'tpl_star', 'tpl_tomato', 'tpl_puppy', 'tpl_cat', 'tpl_bear',
+  'tpl_plant', 'tpl_heartPink', 'tpl_heartRed', 'tpl_heartWhite', 'tpl_jellyfish',
+];

@@ -24,6 +24,7 @@ import {
   type SessionEvent,
   type NowReaction,
 } from '@/lib/statsStorage';
+import { useI18n } from '@/lib/i18n';
 import { colors } from '@/lib/colors';
 
 type Period = 'today' | 'week' | 'month';
@@ -41,18 +42,9 @@ function dateLabel(date: string): string {
   return `${d.getMonth() + 1}/${d.getDate()}`;
 }
 
-function msToSec(ms: number): string {
-  return (ms / 1000).toFixed(1) + '초';
-}
-
-function formatWorkTime(minutes: number): { value: string; unit: string } {
-  if (minutes < 60) {
-    return { value: Math.round(minutes).toString(), unit: '분' };
-  }
-  const h = Math.floor(minutes / 60);
-  const m = Math.round(minutes % 60);
-  if (m === 0) return { value: h.toString(), unit: '시간' };
-  return { value: `${h}시간 ${m}`, unit: '분' };
+// These are now created inside the component to use i18n
+function msToSecStr(ms: number, secFn: (s: string) => string): string {
+  return secFn((ms / 1000).toFixed(1));
 }
 
 function rankDeltaIcon(delta: number): string {
@@ -101,7 +93,7 @@ function DailySessionRow({
               )}
             </View>
             <Text style={chartStyles.dayStat}>
-              {d.count > 0 ? `${mins}분 / ${d.count}세션` : ''}
+              {d.count > 0 ? `${mins}m / ${d.count}` : ''}
             </Text>
           </View>
         );
@@ -127,6 +119,7 @@ export function StatsScreen() {
   const [period, setPeriod] = useState<Period>('week');
   const [refreshKey, setRefreshKey] = useState(0);
   const { memberships, allMembers, memberId, activeTeamCode } = useSocial();
+  const { t } = useI18n();
   const insets = useSafeAreaInsets();
 
   const [backendStats, setBackendStats] = useState<BackendStats | null>(null);
@@ -176,7 +169,13 @@ export function StatsScreen() {
   const streak = useMemo(() => backendStats?.streak ?? calcStreak(sessions), [backendStats, sessions]);
   const totalWork = backendStats?.totalSessions ?? filteredSessions.length;
   const workMin = useMemo(() => totalWorkMinutes(filteredSessions), [filteredSessions]);
-  const workTimeDisplay = formatWorkTime(workMin);
+  const workTimeDisplay = (() => {
+    if (workMin < 60) return { value: Math.round(workMin).toString(), unit: t.stats_unit_min };
+    const h = Math.floor(workMin / 60);
+    const m = Math.round(workMin % 60);
+    if (m === 0) return { value: h.toString(), unit: t.stats_unit_hour };
+    return { value: t.stats_unit_hourMin(h, m), unit: t.stats_unit_min };
+  })();
 
   const localAvgMs = useMemo(() => avgReactionMsCalc(filteredReactions), [filteredReactions]);
   const localCompliance = useMemo(() => complianceRateCalc(filteredReactions), [filteredReactions]);
@@ -197,7 +196,7 @@ export function StatsScreen() {
       const todaySessions = workSessions.filter((s) => s.date === today);
       const count = todaySessions.length;
       const minutes = todaySessions.reduce((sum, s) => sum + (s.durationMin ?? 0), 0);
-      return [{ date: today, label: '오늘', count, minutes, compRate: localCompliance }];
+      return [{ date: today, label: t.stats_today, count, minutes, compRate: localCompliance }];
     }
     const days = lastNDays(periodDays);
     const countMap = new Map<string, number>();
@@ -255,10 +254,13 @@ export function StatsScreen() {
   }, [memberships, allMembers]);
 
   const tabs: { key: Period; label: string }[] = [
-    { key: 'today', label: '오늘' },
-    { key: 'week', label: '주간' },
-    { key: 'month', label: '월간' },
+    { key: 'today', label: t.stats_today },
+    { key: 'week', label: t.stats_week },
+    { key: 'month', label: t.stats_month },
   ];
+
+  const tierLabels = { fast: t.stats_fast, normal: t.stats_normal, slow: t.stats_slow } as Record<string, string>;
+  const tierDescs = { fastDesc: t.stats_fastDesc, normalDesc: t.stats_normalDesc, slowDesc: t.stats_slowDesc } as Record<string, string>;
 
   const hasNoTeam = memberships.length === 0;
 
@@ -267,7 +269,7 @@ export function StatsScreen() {
       style={styles.container}
       contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 100 }]}
     >
-      <Text style={styles.title}>{'통계'}</Text>
+      <Text style={styles.title}>{t.stats_title}</Text>
 
       {/* Period tabs */}
       <View style={styles.tabsRow}>
@@ -288,16 +290,16 @@ export function StatsScreen() {
       {/*       SECTION 1: 내 작업           */}
       {/* ═══════════════════════════════════ */}
 
-      <Text style={styles.sectionTitle}>{'내 작업'}</Text>
+      <Text style={styles.sectionTitle}>{t.stats_myWork}</Text>
 
       {/* Streak */}
       {streak > 0 && (
         <View style={styles.streakCard}>
           <Text style={styles.streakEmoji}>{'🔥'}</Text>
           <View>
-            <Text style={styles.streakTitle}>{streak}{'일 연속 집중 중'}</Text>
+            <Text style={styles.streakTitle}>{t.stats_streak(streak)}</Text>
             <Text style={styles.streakSub}>
-              {'오늘도 세션을 완료해 집중력을 이어가세요!'}
+              {t.stats_streakSub}
             </Text>
           </View>
         </View>
@@ -306,17 +308,17 @@ export function StatsScreen() {
       {/* Total work time + Sessions — two stat boxes */}
       <View style={styles.statBoxRow}>
         <View style={styles.statBox}>
-          <Text style={styles.statBoxLabel}>{'총 작업 시간'}</Text>
+          <Text style={styles.statBoxLabel}>{t.stats_totalTime}</Text>
           <View style={styles.statBoxValueRow}>
             <Text style={styles.statBoxValue}>{workTimeDisplay.value}</Text>
             <Text style={styles.statBoxUnit}>{workTimeDisplay.unit}</Text>
           </View>
         </View>
         <View style={styles.statBox}>
-          <Text style={styles.statBoxLabel}>{'완료 세션'}</Text>
+          <Text style={styles.statBoxLabel}>{t.stats_sessions}</Text>
           <View style={styles.statBoxValueRow}>
             <Text style={styles.statBoxValue}>{totalWork}</Text>
-            <Text style={styles.statBoxUnit}>{'회'}</Text>
+            <Text style={styles.statBoxUnit}>{t.stats_unit_times}</Text>
           </View>
         </View>
       </View>
@@ -325,10 +327,10 @@ export function StatsScreen() {
       <View style={styles.card}>
         <View style={styles.cardHeader}>
           <Text style={styles.cardLabel}>
-            {'일별 세션 '}
+            {t.stats_dailySessions}
             {backendLoading && (
               <Text style={{ color: colors.mutedForeground, fontSize: 11 }}>
-                {'(동기화 중)'}
+                {t.stats_syncing}
               </Text>
             )}
           </Text>
@@ -340,7 +342,7 @@ export function StatsScreen() {
       {/*       SECTION 2: 휴식 준수          */}
       {/* ═══════════════════════════════════ */}
 
-      <Text style={styles.sectionTitle}>{'NOW! 준수'}</Text>
+      <Text style={styles.sectionTitle}>{t.stats_nowCompliance}</Text>
 
       {/* Compliance + Reaction speed */}
       <View style={styles.card}>
@@ -350,7 +352,7 @@ export function StatsScreen() {
             {compliance !== null && (
               <View style={{ gap: 6 }}>
                 <View style={styles.complianceRow}>
-                  <Text style={styles.cardLabel}>{'NOW! 준수율'}</Text>
+                  <Text style={styles.cardLabel}>{t.stats_complianceRate}</Text>
                   <Text style={styles.complianceValue}>{compliance}%</Text>
                 </View>
                 <View style={styles.compTrack}>
@@ -368,7 +370,7 @@ export function StatsScreen() {
                   />
                 </View>
                 <Text style={styles.compHint}>
-                  {'제때 일하고 제때 쉽시다!'}
+                  {t.stats_compHint}
                 </Text>
               </View>
             )}
@@ -376,23 +378,23 @@ export function StatsScreen() {
             {/* Reaction speed */}
             <View style={styles.divider} />
             <View style={{ gap: 4 }}>
-              <Text style={styles.cardLabel}>{'NOW! 준수 속도'}</Text>
+              <Text style={styles.cardLabel}>{t.stats_reactionSpeed}</Text>
               <View style={styles.reactionRow}>
-                <Text style={styles.reactionValue}>{msToSec(avgMs)}</Text>
+                <Text style={styles.reactionValue}>{msToSecStr(avgMs, t.stats_sec)}</Text>
                 <Text style={[styles.reactionTier, { color: tier.color }]}>
-                  {tier.grade} {tier.label}
+                  {tier.grade} {tierLabels[tier.labelKey]}
                 </Text>
               </View>
               <Text style={[styles.compHint, { color: tier.color }]}>
-                {tier.description}
+                {tierDescs[tier.descKey]}
               </Text>
             </View>
           </View>
         ) : (
           <View>
-            <Text style={styles.cardLabel}>{'NOW! 준수'}</Text>
+            <Text style={styles.cardLabel}>{t.stats_nowCompliance}</Text>
             <Text style={styles.emptyHint}>
-              {'아직 NOW! 반응 데이터가 없어요.\n세션을 시작하면 기록됩니다.'}
+              {t.stats_noData}
             </Text>
           </View>
         )}
@@ -401,7 +403,7 @@ export function StatsScreen() {
       {/* Daily compliance bars */}
       {backendStats && backendStats.daily.some((d) => d.complianceRate !== null) && (
         <View style={styles.card}>
-          <Text style={styles.cardLabel}>{'일별 준수율'}</Text>
+          <Text style={styles.cardLabel}>{t.stats_dailyCompliance}</Text>
           <View style={{ gap: 8, marginTop: 8 }}>
             {backendStats.daily
               .filter((d) => d.complianceRate !== null)
@@ -434,13 +436,13 @@ export function StatsScreen() {
       {/*       SECTION 3: 팀 보드           */}
       {/* ═══════════════════════════════════ */}
 
-      <Text style={styles.sectionTitle}>{'팀 보드'}</Text>
+      <Text style={styles.sectionTitle}>{t.stats_teamBoard}</Text>
 
       {/* No team hint */}
       {hasNoTeam && (
         <View style={styles.noTeamCard}>
           <Text style={styles.noTeamText}>
-            {'팀에 참가하면 팀원 리더보드가 표시됩니다.'}
+            {t.stats_noTeam}
           </Text>
         </View>
       )}
@@ -449,24 +451,24 @@ export function StatsScreen() {
       {teamLeaderboards.map(({ code, name, rows }) => (
         <View key={code} style={styles.card}>
           <View style={styles.leaderHeader}>
-            <Text style={styles.cardLabel}>{'NOW! 준수 속도 순위 '}</Text>
+            <Text style={styles.cardLabel}>{t.stats_speedRank}</Text>
             <View style={styles.codeBadge}>
               <Text style={styles.codeBadgeText}>{name || code}</Text>
             </View>
           </View>
           {rows.length === 0 ? (
-            <Text style={styles.emptyHint}>{'멤버가 없어요.'}</Text>
+            <Text style={styles.emptyHint}>{t.stats_noMembers}</Text>
           ) : (
             <View style={styles.leaderTable}>
               {/* Header */}
               <View style={styles.leaderRow}>
                 <Text style={[styles.leaderCell, styles.leaderHeaderText, { width: 28 }]}>#</Text>
-                <Text style={[styles.leaderCell, styles.leaderHeaderText, { flex: 1 }]}>{'이름'}</Text>
-                <Text style={[styles.leaderCell, styles.leaderHeaderText, { width: 50, textAlign: 'right' }]}>{'준수율'}</Text>
-                <Text style={[styles.leaderCell, styles.leaderHeaderText, { width: 80, textAlign: 'right' }]}>{'준수속도'}</Text>
+                <Text style={[styles.leaderCell, styles.leaderHeaderText, { flex: 1 }]}>{t.stats_name}</Text>
+                <Text style={[styles.leaderCell, styles.leaderHeaderText, { width: 50, textAlign: 'right' }]}>{t.stats_compRate}</Text>
+                <Text style={[styles.leaderCell, styles.leaderHeaderText, { width: 80, textAlign: 'right' }]}>{t.stats_speed}</Text>
               </View>
               {rows.map((row, i) => {
-                const t =
+                const rt =
                   row.avgReactionMs > 0 && row.reactionCount > 0
                     ? reactionTier(row.avgReactionMs)
                     : null;
@@ -500,7 +502,7 @@ export function StatsScreen() {
                       <Text style={{ fontSize: 13, fontFamily: 'KotraGothic', color: colors.foreground }} numberOfLines={1}>
                         {row.nickname}
                       </Text>
-                      {isMe && <Text style={{ fontSize: 12, color: colors.tomato }}>{'(나)'}</Text>}
+                      {isMe && <Text style={{ fontSize: 12, color: colors.tomato }}>{t.stats_me}</Text>}
                     </View>
                     <Text style={[styles.leaderCell, { width: 50, textAlign: 'right', fontSize: 13, fontFamily: 'Komputa-Regular', color: colors.foreground }]}>
                       {row.compliance !== null ? `${row.compliance}%` : '-'}
@@ -508,10 +510,10 @@ export function StatsScreen() {
                     <Text
                       style={[
                         styles.leaderCell,
-                        { width: 80, textAlign: 'right', fontSize: 13, fontFamily: 'Komputa-Regular', color: t?.color ?? colors.mutedForeground },
+                        { width: 80, textAlign: 'right', fontSize: 13, fontFamily: 'Komputa-Regular', color: rt?.color ?? colors.mutedForeground },
                       ]}
                     >
-                      {t ? `${t.grade} ${msToSec(row.avgReactionMs)}` : '-'}
+                      {rt ? `${rt.grade} ${msToSecStr(row.avgReactionMs, t.stats_sec)}` : '-'}
                     </Text>
                   </View>
                 );

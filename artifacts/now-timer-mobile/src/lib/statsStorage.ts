@@ -118,9 +118,9 @@ export interface ReactionTier {
 }
 
 export function reactionTier(ms: number): ReactionTier {
-  if (ms < 10_000) return { label: '빠름', grade: '⚡', color: '#3b82f6', description: '휴식과 작업을 미루지 않는 당신이 멋져요!' };
-  if (ms < 30_000) return { label: '보통', grade: '👍', color: '#16a34a', description: '미련 갖지 말고 일을 시작하고 휴식합시다!' };
-  return { label: '느림', grade: '🐢', color: '#f97316', description: '휴식도 일도 미루는 당신, 노력하세요!' };
+  if (ms < 10_000) return { labelKey: 'fast' as const, grade: '⚡', color: '#3b82f6', descKey: 'fastDesc' as const };
+  if (ms < 30_000) return { labelKey: 'normal' as const, grade: '👍', color: '#16a34a', descKey: 'normalDesc' as const };
+  return { labelKey: 'slow' as const, grade: '🐢', color: '#f97316', descKey: 'slowDesc' as const };
 }
 
 /** Calculate total work minutes from sessions. Only counts sessions with durationMin recorded. */
