@@ -13,6 +13,7 @@ import Svg, { Path, ClipPath, Rect, Defs } from 'react-native-svg';
 import { useTimer } from '@/context/TimerContext';
 import { useI18n } from '@/lib/i18n';
 import { colors } from '@/lib/colors';
+import { TOMATO_IMAGES, TOMATO_GRAY_IMAGES } from '@/lib/constants';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -60,21 +61,6 @@ function WavyProgress({ progress, devMode }: { progress: number; devMode: boolea
     </Svg>
   );
 }
-
-const TOMATO_IMAGES = [
-  require('@/../assets/images/tomato1.png'),
-  require('@/../assets/images/tomato2.png'),
-  require('@/../assets/images/tomato3.png'),
-  require('@/../assets/images/tomato4.png'),
-  require('@/../assets/images/tomato5.png'),
-];
-
-const TOMATO_GRAY_IMAGES = [
-  require('@/../assets/images/tomato_gray1.png'),
-  require('@/../assets/images/tomato_gray2.png'),
-  require('@/../assets/images/tomato_gray3.png'),
-  require('@/../assets/images/tomato_gray4.png'),
-];
 
 export function FocusScreen() {
   const {

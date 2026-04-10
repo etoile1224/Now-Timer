@@ -4,6 +4,7 @@ import { Audio } from 'expo-av';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Mic, Square, Play, Trash2 } from 'lucide-react-native';
 import { colors } from '@/lib/colors';
+import { useI18n } from '@/lib/i18n';
 
 interface VoiceRecorderProps {
   audioBase64: string | null;
@@ -13,6 +14,7 @@ interface VoiceRecorderProps {
 }
 
 export function VoiceRecorder({ audioBase64, onSave, onDelete, maxDuration = 5 }: VoiceRecorderProps) {
+  const { t } = useI18n();
   const [isRecording, setIsRecording] = useState(false);
   const [countdown, setCountdown] = useState(maxDuration);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -27,6 +29,24 @@ export function VoiceRecorder({ audioBase64, onSave, onDelete, maxDuration = 5 }
     setHasRecording(!!audioBase64);
     localBase64Ref.current = audioBase64;
   }, [audioBase64]);
+
+  // Cleanup on unmount: stop any active timer/recording/sound to prevent leaks
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+      if (recordingRef.current) {
+        recordingRef.current.stopAndUnloadAsync().catch(() => {});
+        recordingRef.current = null;
+      }
+      if (soundRef.current) {
+        soundRef.current.unloadAsync().catch(() => {});
+        soundRef.current = null;
+      }
+    };
+  }, []);
 
   const startRecording = async () => {
     try {
@@ -139,12 +159,12 @@ export function VoiceRecorder({ audioBase64, onSave, onDelete, maxDuration = 5 }
         {!isRecording ? (
           <TouchableOpacity onPress={startRecording} style={voiceStyles.recordButton} activeOpacity={0.7}>
             <Mic size={16} color="#fff" />
-            <Text style={voiceStyles.recordText}>{'\uB179\uC74C \uC2DC\uC791'}</Text>
+            <Text style={voiceStyles.recordText}>{t.voice_recordStart}</Text>
           </TouchableOpacity>
         ) : (
           <TouchableOpacity onPress={stopRecording} style={voiceStyles.recordingButton} activeOpacity={0.7}>
             <Square size={14} color="#fff" />
-            <Text style={voiceStyles.recordText}>{'\uB179\uC74C \uC911... '}{countdown}{'\uCD08'}</Text>
+            <Text style={voiceStyles.recordText}>{t.voice_recording(countdown)}</Text>
           </TouchableOpacity>
         )}
 
@@ -158,7 +178,7 @@ export function VoiceRecorder({ audioBase64, onSave, onDelete, maxDuration = 5 }
             >
               <Play size={14} color={colors.foreground} />
               <Text style={voiceStyles.playText}>
-                {isPlaying ? '\uC7AC\uC0DD \uC911...' : '\uBBF8\uB9AC\uB4E3\uAE30'}
+                {isPlaying ? t.voice_playing : t.voice_preview}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={deleteRecording} style={voiceStyles.deleteButton}>
@@ -169,9 +189,7 @@ export function VoiceRecorder({ audioBase64, onSave, onDelete, maxDuration = 5 }
       </View>
 
       <Text style={voiceStyles.hint}>
-        {hasRecording
-          ? '\uB179\uC74C\uB41C \uBCF4\uC774\uC2A4\uAC00 \uD3EC\uD06C \uC54C\uB9BC\uC5D0 \uC0AC\uC6A9\uB429\uB2C8\uB2E4'
-          : `\uCD5C\uB300 ${maxDuration}\uCD08 \uB179\uC74C \uAC00\uB2A5 \u00B7 \uD300\uC6D0\uC5D0\uAC8C NOW! \uC54C\uB9BC\uC73C\uB85C \uC804\uC1A1\uB429\uB2C8\uB2E4`}
+        {hasRecording ? t.voice_hintSaved : t.voice_hintEmpty(maxDuration)}
       </Text>
     </View>
   );

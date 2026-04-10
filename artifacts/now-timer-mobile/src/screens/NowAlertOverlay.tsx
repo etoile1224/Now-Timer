@@ -11,17 +11,9 @@ import {
 } from 'react-native';
 import { useTimer } from '@/context/TimerContext';
 import { useI18n } from '@/lib/i18n';
+import { TOMATO_IMAGES } from '@/lib/constants';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-
-// Tomato images for escalation — one tomato added per level
-const TOMATO_IMAGES = [
-  require('@/../assets/images/tomato1.png'),
-  require('@/../assets/images/tomato2.png'),
-  require('@/../assets/images/tomato3.png'),
-  require('@/../assets/images/tomato4.png'),
-  require('@/../assets/images/tomato5.png'),
-];
 
 interface LevelConfig {
   bgColor: string;

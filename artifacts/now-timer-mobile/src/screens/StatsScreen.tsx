@@ -26,6 +26,7 @@ import {
 } from '@/lib/statsStorage';
 import { useI18n } from '@/lib/i18n';
 import { colors } from '@/lib/colors';
+import { TOMATO_IMAGES } from '@/lib/constants';
 
 type Period = 'today' | 'week' | 'month';
 
@@ -52,16 +53,6 @@ function rankDeltaIcon(delta: number): string {
   if (delta < 0) return '▼';
   return '-';
 }
-
-/* ── Tomato images for daily display ── */
-
-const TOMATO_IMAGES = [
-  require('@/../assets/images/tomato1.png'),
-  require('@/../assets/images/tomato2.png'),
-  require('@/../assets/images/tomato3.png'),
-  require('@/../assets/images/tomato4.png'),
-  require('@/../assets/images/tomato5.png'),
-];
 
 function DailySessionRow({
   data,

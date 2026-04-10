@@ -23,6 +23,7 @@ import {
   updateMembershipName,
 } from '@/lib/teamStorage';
 import { useI18n, type Translations } from '@/lib/i18n';
+import { VIBRATION_POKE } from '@/lib/constants';
 
 interface SocialState {
   memberships: Membership[];
@@ -151,7 +152,7 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
                 const hasMultiple = membershipsRef.current.length > 1;
                 const msg = tRef.current.social_peerAlert(incoming.nickname, 3);
                 setPeerAlertMsg(hasMultiple ? `[${m.code}] ${msg}` : msg);
-                Vibration.vibrate([120, 60, 120, 60, 280]);
+                Vibration.vibrate([...VIBRATION_POKE]);
               } else if (prevLevel < 2 && incoming.ignoreLevel >= 2) {
                 const hasMultiple = membershipsRef.current.length > 1;
                 const msg = tRef.current.social_peerAlert(incoming.nickname, 2);
@@ -244,7 +245,7 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
           }
         }
         setPeerAlertMsg(tRef.current.social_peerAlert(nick, level));
-        Vibration.vibrate([120, 60, 120, 60, 280]);
+        Vibration.vibrate([...VIBRATION_POKE]);
       }
     }
 
