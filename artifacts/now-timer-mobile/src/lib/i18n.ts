@@ -222,7 +222,9 @@ const ko = {
   pixel_pen: '펜',
   pixel_eraser: '지우개',
   pixel_picker: '스포이드',
+  pixel_pan: '이동',
   pixel_clear: '전체삭제',
+  pixel_undo: '되돌리기',
 
   // ── pixelTemplates ──
   tpl_star: '별',
@@ -445,7 +447,9 @@ const en: typeof ko = {
   pixel_pen: 'Pen',
   pixel_eraser: 'Eraser',
   pixel_picker: 'Picker',
+  pixel_pan: 'Move',
   pixel_clear: 'Clear all',
+  pixel_undo: 'Undo',
 
   // ── pixelTemplates ──
   tpl_star: 'Star',

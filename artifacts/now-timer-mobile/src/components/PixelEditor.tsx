@@ -71,7 +71,13 @@ export function ensureGrid32(grid: (string | null)[][]): (string | null)[][] {
 
 /* ── Types ── */
 
-type Tool = 'pen' | 'eraser' | 'picker';
+type Tool = 'pen' | 'eraser' | 'picker' | 'pan';
+
+const HISTORY_CAP = 50;
+
+function cloneGrid(g: (string | null)[][]): (string | null)[][] {
+  return g.map((r) => [...r]);
+}
 
 interface PixelEditorModalProps {
   visible: boolean;
@@ -104,14 +110,51 @@ export function PixelEditorModal({ visible, value, onSave, onCancel }: PixelEdit
   const [panY, setPanY] = useState(0);
   const [showTemplates, setShowTemplates] = useState(false);
 
+  // ── Undo history ──
+  const historyRef = useRef<(string | null)[][][]>([]);
+  const historyIdxRef = useRef(-1);
+  const [canUndo, setCanUndo] = useState(false);
+
+  const refreshUndoFlag = useCallback(() => {
+    setCanUndo(historyIdxRef.current > 0);
+  }, []);
+
+  const pushHistory = useCallback(
+    (g: (string | null)[][]) => {
+      // Drop forward history (anything after current idx) when a new edit lands
+      historyRef.current = historyRef.current.slice(0, historyIdxRef.current + 1);
+      historyRef.current.push(cloneGrid(g));
+      if (historyRef.current.length > HISTORY_CAP) {
+        historyRef.current.shift();
+      }
+      historyIdxRef.current = historyRef.current.length - 1;
+      refreshUndoFlag();
+    },
+    [refreshUndoFlag],
+  );
+
+  const undo = useCallback(() => {
+    if (historyIdxRef.current <= 0) return;
+    historyIdxRef.current -= 1;
+    const restored = cloneGrid(historyRef.current[historyIdxRef.current]);
+    gridRef.current = restored;
+    setGrid(restored);
+    refreshUndoFlag();
+  }, [refreshUndoFlag]);
+
   // Reset state when modal opens
   useEffect(() => {
     if (visible) {
-      setGrid(value.map(r => [...r]));
+      const initial = value.map(r => [...r]);
+      setGrid(initial);
       setZoom(1);
       setPanX(0);
       setPanY(0);
       setTool('pen');
+      // Seed history with the opening state so undo always falls back to it
+      historyRef.current = [cloneGrid(initial)];
+      historyIdxRef.current = 0;
+      setCanUndo(false);
     }
   }, [visible]);
 
@@ -129,9 +172,13 @@ export function PixelEditorModal({ visible, value, onSave, onCancel }: PixelEdit
   const panYRef = useRef(panY);
   panYRef.current = panY;
 
-  const gestureRef = useRef<'idle' | 'drawing' | 'zooming'>('idle');
+  const gestureRef = useRef<'idle' | 'drawing' | 'panning' | 'zooming'>('idle');
   const lastPinchDistRef = useRef(0);
   const lastMidRef = useRef({ x: 0, y: 0 });
+  const lastPanPointRef = useRef({ x: 0, y: 0 });
+  // Track whether current stroke actually changed any cell — to avoid pushing
+  // a no-op history entry when the user just taps without altering anything.
+  const strokeChangedRef = useRef(false);
 
   /* ── Drawing ── */
 
@@ -160,6 +207,7 @@ export function PixelEditorModal({ visible, value, onSave, onCancel }: PixelEdit
     next[row][col] = newColor;
     gridRef.current = next;
     setGrid(next);
+    strokeChangedRef.current = true;
   }, []);
 
   /* ── Touch handling (1-finger draw, 2-finger zoom/pan) ── */
@@ -173,8 +221,19 @@ export function PixelEditorModal({ visible, value, onSave, onCancel }: PixelEdit
       const [t1, t2] = touches;
       lastPinchDistRef.current = Math.hypot(t2.pageX - t1.pageX, t2.pageY - t1.pageY);
       lastMidRef.current = { x: (t1.pageX + t2.pageX) / 2, y: (t1.pageY + t2.pageY) / 2 };
+      return;
+    }
+
+    // 1-finger gesture: pan tool → drag the canvas; otherwise → draw
+    if (toolRef.current === 'pan') {
+      gestureRef.current = 'panning';
+      lastPanPointRef.current = {
+        x: e.nativeEvent.pageX,
+        y: e.nativeEvent.pageY,
+      };
     } else {
       gestureRef.current = 'drawing';
+      strokeChangedRef.current = false;
       drawAtPoint(e.nativeEvent.locationX, e.nativeEvent.locationY);
     }
   }, [drawAtPoint]);
@@ -205,15 +264,33 @@ export function PixelEditorModal({ visible, value, onSave, onCancel }: PixelEdit
 
       lastPinchDistRef.current = newDist;
       lastMidRef.current = newMid;
-    } else if (gestureRef.current === 'drawing') {
+      return;
+    }
+
+    if (gestureRef.current === 'panning') {
+      const px = e.nativeEvent.pageX;
+      const py = e.nativeEvent.pageY;
+      const dx = px - lastPanPointRef.current.x;
+      const dy = py - lastPanPointRef.current.y;
+      lastPanPointRef.current = { x: px, y: py };
+      setPanX(p => { const n = p + dx; panXRef.current = n; return n; });
+      setPanY(p => { const n = p + dy; panYRef.current = n; return n; });
+      return;
+    }
+
+    if (gestureRef.current === 'drawing') {
       drawAtPoint(e.nativeEvent.locationX, e.nativeEvent.locationY);
     }
   }, [drawAtPoint]);
 
   const handleResponderRelease = useCallback(() => {
+    if (gestureRef.current === 'drawing' && strokeChangedRef.current) {
+      pushHistory(gridRef.current);
+    }
+    strokeChangedRef.current = false;
     gestureRef.current = 'idle';
     lastPinchDistRef.current = 0;
-  }, []);
+  }, [pushHistory]);
 
   /* ── Zoom buttons ── */
 
@@ -258,7 +335,19 @@ export function PixelEditorModal({ visible, value, onSave, onCancel }: PixelEdit
           <TouchableOpacity onPress={onCancel} style={es.headerBtn}>
             <Text style={es.headerBtnText}>{t.pixel_cancel}</Text>
           </TouchableOpacity>
-          <Text style={es.headerTitle}>{t.pixel_title}</Text>
+          <View style={es.headerCenter}>
+            <Text style={es.headerTitle}>{t.pixel_title}</Text>
+            <TouchableOpacity
+              onPress={undo}
+              disabled={!canUndo}
+              style={[es.undoBtn, !canUndo && es.undoBtnDisabled]}
+              accessibilityLabel={t.pixel_undo}
+            >
+              <Text style={[es.undoBtnText, !canUndo && es.undoBtnTextDisabled]}>
+                ↶ {t.pixel_undo}
+              </Text>
+            </TouchableOpacity>
+          </View>
           <TouchableOpacity onPress={() => onSave(grid)} style={[es.headerBtn, es.headerSaveBtn]}>
             <Text style={[es.headerBtnText, { color: '#fff' }]}>{t.pixel_save}</Text>
           </TouchableOpacity>
@@ -325,6 +414,7 @@ export function PixelEditorModal({ visible, value, onSave, onCancel }: PixelEdit
                     const g = tpl.grid.map(r => [...r]);
                     setGrid(g);
                     gridRef.current = g;
+                    pushHistory(g);
                     setShowTemplates(false);
                   }}
                   style={es.templateBtn}
@@ -342,6 +432,7 @@ export function PixelEditorModal({ visible, value, onSave, onCancel }: PixelEdit
               { key: 'pen' as Tool, label: t.pixel_pen, icon: '✏️' },
               { key: 'eraser' as Tool, label: t.pixel_eraser, icon: '🧹' },
               { key: 'picker' as Tool, label: t.pixel_picker, icon: '💧' },
+              { key: 'pan' as Tool, label: t.pixel_pan, icon: '✋' },
             ]).map(toolItem => (
               <TouchableOpacity
                 key={toolItem.key}
@@ -353,7 +444,12 @@ export function PixelEditorModal({ visible, value, onSave, onCancel }: PixelEdit
               </TouchableOpacity>
             ))}
             <View style={{ flex: 1 }} />
-            <TouchableOpacity onPress={() => { setGrid(createEmptyGrid()); gridRef.current = createEmptyGrid(); }} style={es.toolBtn}>
+            <TouchableOpacity onPress={() => {
+              const empty = createEmptyGrid();
+              setGrid(empty);
+              gridRef.current = empty;
+              pushHistory(empty);
+            }} style={es.toolBtn}>
               <Text style={{ fontSize: 16 }}>{'🗑️'}</Text>
               <Text style={es.toolLabel}>{t.pixel_clear}</Text>
             </TouchableOpacity>
@@ -419,6 +515,30 @@ const es = StyleSheet.create({
   headerBtnText: {
     fontSize: 14,
     fontFamily: 'KotraBold',
+    color: colors.mutedForeground,
+  },
+  headerCenter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  undoBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: colors.muted,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  undoBtnDisabled: {
+    opacity: 0.4,
+  },
+  undoBtnText: {
+    fontSize: 12,
+    fontFamily: 'KotraBold',
+    color: colors.foreground,
+  },
+  undoBtnTextDisabled: {
     color: colors.mutedForeground,
   },
 

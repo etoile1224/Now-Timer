@@ -26,19 +26,26 @@
 
 ---
 
-## Phase 2 — 픽셀 에디터 UX 개선 [대기]
+## Phase 2 — 픽셀 에디터 UX 개선 [완료]
 
 **목표**: 픽셀 아바타 만드는 작업의 실수 복구와 정밀 작업 편의성 강화.
 
 **작업 항목**
-- [ ] 실행취소 (Undo): 그리기 이벤트마다 히스토리 스택에 push, 버튼 / 제스처로 pop
-- [ ] (선택) Redo도 함께 — 의사결정 필요
-- [ ] 150% 확대 시 화면 드래그 패닝: 줌 활성 상태에서 한 손가락 드래그 = 패닝, 두 손가락 핀치 = 줌 토글 유지
-- [ ] 패닝 중에는 그리기 비활성화 (실수 방지)
-- [ ] 줌 리셋 버튼
+- [x] 실행취소 (Undo): 스트로크 단위 히스토리 스택 (셀 단위가 아닌 release 시점에 push) + 50개 cap + 헤더 Undo 버튼
+- [ ] (선택) Redo — Phase 2 범위에서 제외 (필요 시 백로그)
+- [x] 150% 확대 시 화면 드래그 패닝: 'pan' 툴 추가, 1-finger 드래그가 패닝으로 동작
+- [x] 패닝 중에는 그리기 비활성화 (tool === 'pan' 일 때 drawAtPoint 호출 안 함)
+- [x] 줌 리셋 버튼 — 기존 zoom % 라벨 탭으로 이미 구현되어 있음 (resetZoom)
+- [x] 템플릿 적용 / 전체삭제 도 history에 push
+- [x] i18n: `pixel_pan`, `pixel_undo` 키 추가 (ko/en)
 
 **완료 기록**
-- (작업 진행 후 채움)
+- 일자: 2026-04-16
+- 변경 파일:
+  - `artifacts/now-timer-mobile/src/components/PixelEditor.tsx` — Tool 타입에 'pan' 추가, history stack(`historyRef`/`historyIdxRef`) + `pushHistory`/`undo`, `strokeChangedRef` 로 no-op 스트로크 감지, 1-finger pan 제스처 핸들러, 헤더 Undo 버튼 + 비활성화 스타일
+  - `artifacts/now-timer-mobile/src/lib/i18n.ts` — `pixel_pan` / `pixel_undo` ko/en
+- 핵심 구현 방식: 기존 2-finger pinch/pan 은 그대로 유지하고, 'pan' 툴이 활성화되었을 때만 1-finger 가 patterns canvas drag 로 동작. 줌 무관하게 동작(줌이 1배여도 pan 가능 — 사용자에게 더 일관된 모델). Undo 는 스트로크 release 시점에 grid snapshot 을 push, 50개 cap LRU. 모달 열 때 초기 grid 를 history[0] 로 seed해서 첫 스트로크 직후 undo 가 빈 상태로 돌아갈 수 있게 함. 템플릿 적용/Clear 도 명시적으로 push.
+- 커밋: (커밋 후 채움)
 
 ---
 
