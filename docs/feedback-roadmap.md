@@ -22,7 +22,7 @@
   - `artifacts/now-timer-mobile/src/context/TimerContext.tsx` — `scheduleBackgroundAlertsForPhase` 추가, `transitionTo` 가 매번 cancel→재예약, `stop()` 에도 cancel 추가, `escalationSeconds` 선언 위치를 위로 이동(forward ref 회피)
   - `artifacts/now-timer-mobile/src/App.tsx` — 앱 부팅 시 `ensureNotificationPermission()` 호출
 - 핵심 구현 방식: `transitionTo` 가 모든 phase 진입의 단일 진입점이므로, 거기서 한 번에 (1) 기존 알림 모두 취소 (2) 새 phase 가 focusing/breaking 일 때만 end + lv2 + lv3 세 개를 미리 예약. nowAlert/returnAlert 진입 시에는 이미 사운드/오버레이가 떴으므로 추가 예약 없음. 식별자에 `timer-` prefix 를 붙여 `getAllScheduledNotificationsAsync` 로 일괄 취소 가능하게 함.
-- 커밋: (커밋 후 채움)
+- 커밋: `ad05120`
 
 ---
 
