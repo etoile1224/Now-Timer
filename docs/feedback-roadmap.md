@@ -44,8 +44,8 @@
 - 변경 파일:
   - `artifacts/now-timer-mobile/src/components/PixelEditor.tsx` — Tool 타입에 'pan' 추가, history stack(`historyRef`/`historyIdxRef`) + `pushHistory`/`undo`, `strokeChangedRef` 로 no-op 스트로크 감지, 1-finger pan 제스처 핸들러, 헤더 Undo 버튼 + 비활성화 스타일
   - `artifacts/now-timer-mobile/src/lib/i18n.ts` — `pixel_pan` / `pixel_undo` ko/en
-- 핵심 구현 방식: 기존 2-finger pinch/pan 은 그대로 유지하고, 'pan' 툴이 활성화되었을 때만 1-finger 가 patterns canvas drag 로 동작. 줌 무관하게 동작(줌이 1배여도 pan 가능 — 사용자에게 더 일관된 모델). Undo 는 스트로크 release 시점에 grid snapshot 을 push, 50개 cap LRU. 모달 열 때 초기 grid 를 history[0] 로 seed해서 첫 스트로크 직후 undo 가 빈 상태로 돌아갈 수 있게 함. 템플릿 적용/Clear 도 명시적으로 push.
-- 커밋: (커밋 후 채움)
+- 핵심 구현 방식: 기존 2-finger pinch/pan 은 그대로 유지하고, 'pan' 툴이 활성화되었을 때만 1-finger 가 캔버스 drag 로 동작. 줌 무관하게 동작(줌이 1배여도 pan 가능 — 사용자에게 더 일관된 모델). Undo 는 스트로크 release 시점에 grid snapshot 을 push, 50개 cap LRU. 모달 열 때 초기 grid 를 history[0] 로 seed해서 첫 스트로크 직후 undo 가 빈 상태로 돌아갈 수 있게 함. 템플릿 적용/Clear 도 명시적으로 push.
+- 커밋: `fb1c6aa`
 
 ---
 
