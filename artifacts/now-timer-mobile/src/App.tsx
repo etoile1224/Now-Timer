@@ -6,6 +6,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Timer, Users, BarChart2, Settings } from 'lucide-react-native';
 import { useFonts } from 'expo-font';
 import { initStorage } from '@/lib/storage';
+import { ensureNotificationPermission } from '@/lib/pushNotifications';
 import { I18nProvider, useI18n } from '@/lib/i18n';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { TimerProvider, useTimer } from '@/context/TimerContext';
@@ -145,6 +146,8 @@ export default function App() {
 
   useEffect(() => {
     initStorage().then(() => setStorageReady(true));
+    // 백그라운드 NOW! 로컬 알림 권한 확보 (실패해도 앱은 계속 동작)
+    void ensureNotificationPermission();
   }, []);
 
   useEffect(() => {

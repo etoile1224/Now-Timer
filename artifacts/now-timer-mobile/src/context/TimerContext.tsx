@@ -9,6 +9,10 @@ import React, {
 import { Vibration } from 'react-native';
 import { loadSettings, saveSettings, type TimerSettings } from '@/lib/timerSettings';
 import { playAlert, stopAlert } from '@/lib/sounds';
+import {
+  scheduleTimerNotification,
+  cancelAllTimerNotifications,
+} from '@/lib/pushNotifications';
 
 export type TimerPhase =
   | 'idle'
@@ -81,22 +85,6 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const transitionTo = useCallback(
-    (nextPhase: TimerPhase, durationSeconds: number) => {
-      const end = Date.now() + durationSeconds * 1000;
-      setPhase(nextPhase);
-      setEndTimeMs(end);
-      setTotalSeconds(durationSeconds);
-      setRemainingSeconds(durationSeconds);
-    },
-    [],
-  );
-
-  const resetIgnoreLevel = useCallback(() => {
-    ignoreLevelRef.current = 0;
-    setIgnoreLevel(0);
-  }, []);
-
   const escalationSeconds = useCallback(() => {
     if (devModeRef.current) return DEV_SECONDS;
     switch (settings.escalationSpeed) {
@@ -105,6 +93,47 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
       default: return 30;
     }
   }, [settings.escalationSpeed]);
+
+  // ── Background local notifications ──────────────────
+  // 백그라운드 알림 전략:
+  //  - focusing 진입 시: 종료 시점에 work-end (NOW! Lv1) + work-lv2 + work-lv3 예약
+  //  - breaking 진입 시: 종료 시점에 break-end + break-lv2 + break-lv3 예약
+  //  - nowAlert/returnAlert: 이미 사운드/오버레이가 떴으므로 추가 예약 없음
+  //  - 모든 phase 전환 직전에 기존 예약 전부 취소 (race-free)
+  const scheduleBackgroundAlertsForPhase = useCallback(
+    (nextPhase: TimerPhase, durationSeconds: number) => {
+      void cancelAllTimerNotifications().then(() => {
+        const esc = escalationSeconds();
+        if (nextPhase === 'focusing') {
+          void scheduleTimerNotification('work-end', durationSeconds);
+          void scheduleTimerNotification('work-lv2', durationSeconds + esc);
+          void scheduleTimerNotification('work-lv3', durationSeconds + esc * 2);
+        } else if (nextPhase === 'breaking') {
+          void scheduleTimerNotification('break-end', durationSeconds);
+          void scheduleTimerNotification('break-lv2', durationSeconds + esc);
+          void scheduleTimerNotification('break-lv3', durationSeconds + esc * 2);
+        }
+      });
+    },
+    [escalationSeconds],
+  );
+
+  const transitionTo = useCallback(
+    (nextPhase: TimerPhase, durationSeconds: number) => {
+      const end = Date.now() + durationSeconds * 1000;
+      setPhase(nextPhase);
+      setEndTimeMs(end);
+      setTotalSeconds(durationSeconds);
+      setRemainingSeconds(durationSeconds);
+      scheduleBackgroundAlertsForPhase(nextPhase, durationSeconds);
+    },
+    [scheduleBackgroundAlertsForPhase],
+  );
+
+  const resetIgnoreLevel = useCallback(() => {
+    ignoreLevelRef.current = 0;
+    setIgnoreLevel(0);
+  }, []);
 
   useEffect(() => {
     clearInterval_();
@@ -173,6 +202,7 @@ export function TimerProvider({ children }: { children: React.ReactNode }) {
   const stop = useCallback(() => {
     clearInterval_();
     void stopAlert();
+    void cancelAllTimerNotifications();
     resetIgnoreLevel();
     setPhase('idle');
     setRemainingSeconds(settings.workDuration * 60);
