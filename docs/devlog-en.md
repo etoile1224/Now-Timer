@@ -5,7 +5,7 @@
 ---
 
 ## 2026-04-16 — feat(phase6): Social push notification deep-linking
-- **Commit**: (Pending)
+- **Commit**: `11fc739`
 - **Files**: `navigation.ts`, `App.tsx`, `SocialContext.tsx`
 - Separated push notification tap handling from foreground receipt. Tapping a team 'poke' or 'alert' notification now directly routes the user to the `SocialScreen` tab, utilizing `createNavigationContainerRef`.
 

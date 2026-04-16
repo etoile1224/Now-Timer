@@ -129,4 +129,4 @@
   - `artifacts/now-timer-mobile/src/App.tsx` (navigationRef 바인딩)
   - `artifacts/now-timer-mobile/src/context/SocialContext.tsx`
 - 핵심 구현 방식: 이전 페이즈들에서 클라이언트의 `ignoreLevel` 송신 기능과 서버단의 `teamStore.ts` 내 푸시 발송 로직은 모두 기구현되어 안정화된 것을 코드 분석을 통해 확인했습니다. 따라서 미구현된 딥링킹 탭 액션 로직에 집중했습니다. 앱 전역 환경에서 라우팅이 가능한 `createNavigationContainerRef`를 구축하고, 알림을 직접 누르는 `NotificationResponseReceived` 리스너 핸들러에 `navigate('Social')` 전환 함수를 통합했습니다.
-- 커밋: (Pending Commit)
+- 커밋: `11fc739`
