@@ -5,7 +5,7 @@
 ---
 
 ## 2026-04-16 — fix(phase5): Fix layout jitter in NOW! state components
-- **Commit**: (Pending)
+- **Commit**: `e56797c`
 - **Files**: `NowAlertOverlay.tsx`
 - Fixed vertical layout jitter caused by per-second countdown text updates triggering flex container height recalculation.
 - Applied `minHeight` bound to `countdownText` and the overall footer hint section, and added `tabular-nums` `fontVariant` to prevent dynamic width scaling for numbers.

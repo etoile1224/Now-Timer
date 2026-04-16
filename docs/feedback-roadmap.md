@@ -106,7 +106,7 @@
 - 변경 파일:
   - `artifacts/now-timer-mobile/src/screens/NowAlertOverlay.tsx`
 - 핵심 구현 방식: 플렉스박스(`justifyContent: 'center'`) 배치에 의해 1픽셀이라도 높이가 바뀌면 전체 레이아웃이 널뛰기하는 Jitter 증상이었습니다. 초마다 바뀌는 `EscalationBar` 컴포넌트의 시간 텍스트 부분에 `fontVariant: ['tabular-nums']`와 강제 조절 박스(`minHeight: 16`)를 씌우고 추가 안내문(`footerHint`) 영역 역시 `minHeight: 18` 고정 처리하여 떨림을 원천 차단했습니다.
-- 커밋: (Pending Commit)
+- 커밋: `e56797c`
 
 ---
 
