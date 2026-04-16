@@ -126,6 +126,8 @@ CS 비전공 3인 팀이 자체 해커톤으로 시작. 첫 3시간 와이어프
 │       │   │   ├── SocialToasts.tsx      # PokeToast + PeerAlertToast
 │       │   │   ├── NumberInput.tsx       # 드래그 숫자 입력
 │       │   │   ├── VoiceRecorder.tsx     # 보이스 콕 녹음/재생
+│       │   │   ├── CookingTomatoes.tsx   # 프라이팬 + 토마토 흔들기 애니메이션
+│       │   │   ├── EscalationBar.tsx     # 무시 도트 + 진행바 + 카운트다운
 │       │   │   └── pixelTemplates.ts     # 아바타 프리셋 10종
 │       │   ├── hooks/
 │       │   │   └── useStatsTracker.ts    # 세션 완료 시 통계 기록
@@ -140,6 +142,7 @@ CS 비전공 3인 팀이 자체 해커톤으로 시작. 첫 3시간 와이어프
 │       │       ├── statsStorage.ts      # 로컬 통계 저장
 │       │       ├── constants.ts         # 공유 상수 (토마토 이미지, 진동 패턴)
 │       │       ├── colors.ts            # 테마 색상
+│       │       ├── navigation.ts        # 전역 NavigationContainerRef (딥링크용)
 │       │       └── i18n.ts              # 한국어/영어 번역
 │       ├── assets/                      # 아이콘, 이미지, 폰트, 사운드
 │       ├── app.json                     # Expo 설정

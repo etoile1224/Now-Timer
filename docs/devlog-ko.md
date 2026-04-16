@@ -4,6 +4,11 @@
 
 ---
 
+## 2026-04-16 — refactor(phase7): NowAlertOverlay 컴포넌트 분리
+- **커밋**: (커밋 후 채움)
+- **변경 파일**: `NowAlertOverlay.tsx`, `CookingTomatoes.tsx` (신규), `EscalationBar.tsx` (신규)
+- `NowAlertOverlay.tsx` 584줄 → 340줄 (-42%). CookingTomatoes (프라이팬+흔들기 애니메이션)와 EscalationBar (무시 도트+진행바+카운트다운)를 독립 컴포넌트로 분리. 동작 변화 없는 순수 구조 리팩토링.
+
 ## 2026-04-16 — feat(phase6): 푸시 알람 탭 시 자동 화면 전환(딥링킹)
 - **커밋**: `11fc739`
 - **변경 파일**: `navigation.ts`, `App.tsx`, `SocialContext.tsx`

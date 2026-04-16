@@ -130,3 +130,23 @@
   - `artifacts/now-timer-mobile/src/context/SocialContext.tsx`
 - 핵심 구현 방식: 이전 페이즈들에서 클라이언트의 `ignoreLevel` 송신 기능과 서버단의 `teamStore.ts` 내 푸시 발송 로직은 모두 기구현되어 안정화된 것을 코드 분석을 통해 확인했습니다. 따라서 미구현된 딥링킹 탭 액션 로직에 집중했습니다. 앱 전역 환경에서 라우팅이 가능한 `createNavigationContainerRef`를 구축하고, 알림을 직접 누르는 `NotificationResponseReceived` 리스너 핸들러에 `navigate('Social')` 전환 함수를 통합했습니다.
 - 커밋: `11fc739`
+
+---
+
+## Phase 7 — 파일 비대화 해소 및 구조 최적화 [완료]
+
+**목표**: Phase 1~6 개발로 비대해진 `NowAlertOverlay.tsx` (584줄)에서 독립 컴포넌트를 분리하여 단일 책임 원칙(SRP) 준수 및 유지보수성 강화.
+
+**작업 항목**
+- [x] `CookingTomatoes.tsx` 분리 — 프라이팬 에셋 + Animated.loop 흔들기 애니메이션 + 토마토 배치 (~133줄)
+- [x] `EscalationBar.tsx` 분리 — 무시 횟수 도트 배열 + 진행 바 + 카운트다운 텍스트 (~121줄)
+- [x] `NowAlertOverlay.tsx`에서 인라인 정의 제거, import로 교체 (584줄 → 340줄, -42%)
+
+**완료 기록**
+- 일자: 2026-04-16
+- 변경 파일:
+  - `artifacts/now-timer-mobile/src/components/CookingTomatoes.tsx` (신규)
+  - `artifacts/now-timer-mobile/src/components/EscalationBar.tsx` (신규)
+  - `artifacts/now-timer-mobile/src/screens/NowAlertOverlay.tsx` (인라인 → import)
+- 핵심 구현 방식: 이전 세션에서 분리 파일 2개는 이미 생성되었으나 NowAlertOverlay.tsx에서 import 교체가 안 된 상태였음. 인라인 함수(CookingTomatoes + cookingStyles, EscalationBar + escalationStyles) 약 244줄 제거 후 import 2줄로 교체. 동작 변화 없음 (순수 구조 리팩토링).
+- 커밋: (커밋 후 채움)
