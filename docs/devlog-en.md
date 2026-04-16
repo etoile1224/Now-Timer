@@ -4,8 +4,15 @@
 
 ---
 
+## 2026-04-16 — feat(phase4): Frying pan + Tomato visual detail (Escalation animation)
+- **Commit**: `de0e825`
+- **Files**: `FocusScreen.tsx`, `NowAlertOverlay.tsx`
+- Significantly increased the size of the session tomato icon in the basic timer and focus screen from 36x36 to 64x64 for visual emphasis.
+- Adjusted the offset of the alert overlay screen elements so that the frying pan is positioned in the exact center of the screen.
+- Added a dramatic acceleration to the frying pan shaking animation vibration and speed based on the escalation level (Lv.1~Lv.3+) using `Animated.loop`.
+
 ## 2026-04-16 — feat(phase3): Improve font/element size readability and expand touch targets
-- **Commit**: (Pending)
+- **Commit**: `de0e825`
 - **Files**: `NumberInput.tsx`, `StatsScreen.tsx`, `SettingsScreen.tsx`
 - Increased base font size by +2~4pt across the app.
 - Ensured minimum touch targets of 44x44pt for `NumberInput` controls, tabs, toggles, and buttons according to iOS HIG.

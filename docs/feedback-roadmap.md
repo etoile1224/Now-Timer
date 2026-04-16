@@ -67,23 +67,28 @@
   - `artifacts/now-timer-mobile/src/screens/StatsScreen.tsx` (폰트 +2pt 일괄 증대, 탭 최소 터치 영역 보장)
   - `artifacts/now-timer-mobile/src/screens/SettingsScreen.tsx` (폰트 단위 상향, level/escalation/lang 토글 버튼들 HIG 44px 대응)
 - 핵심 구현 방식: inline style 및 StyleSheet에 하드코딩된 fontSize 및 minHeight 수치들을 전수 조사하여 상향 반영함. (탭 제스처 시 사용자 터치 미스율 감소 기대)
-- 커밋: (Pending Commit)
+- 커밋: `de0e825`
 
 ---
 
-## Phase 4 — 후라이팬 + 토마토 시각 디테일 [대기]
+## Phase 4 — 후라이팬 + 토마토 시각 디테일 [완료]
 
 **목표**: 토마토 세계관의 시각적 매력 강화. 후라이팬에 토마토를 볶는 비주얼 메타포를 살린다.
 
 **작업 항목**
-- [ ] 세션 토마토 카운터 이미지 사이즈 키우기
-- [ ] NowAlertOverlay 후라이팬의 원형 팬 부분이 화면 중앙에 오도록 레이아웃 재조정
-- [ ] 후라이팬 흔들기 애니메이션 추가 (transform: translateX/rotate)
-- [ ] 에스컬레이션 레벨에 따라 흔들기 속도 가속 (Lv1 느림 → Lv3 매우 빠름)
-- [ ] 흔들림과 토마토 위치 sync (토마토가 팬 안에서 함께 흔들리는 느낌)
+- [x] 세션 토마토 카운터 이미지 사이즈 키우기
+- [x] NowAlertOverlay 후라이팬의 원형 팬 부분이 화면 중앙에 오도록 레이아웃 재조정
+- [x] 후라이팬 흔들기 애니메이션 추가 (transform: translateX/rotate)
+- [x] 에스컬레이션 레벨에 따라 흔들기 속도 가속 (Lv1 느림 → Lv3 매우 빠름)
+- [x] 흔들림과 토마토 위치 sync (토마토가 팬 안에서 함께 흔들리는 느낌)
 
 **완료 기록**
-- (작업 진행 후 채움)
+- 일자: 2026-04-16
+- 변경 파일:
+  - `artifacts/now-timer-mobile/src/screens/FocusScreen.tsx` — 세션 카운터 토마토 이미지 사이즈를 기존 48px 디자인에서 64px(64x64)로 확대 적용.
+  - `artifacts/now-timer-mobile/src/screens/NowAlertOverlay.tsx` — CookingTomatoes 래퍼에 Animated.loop 추가 (Lv별 800ms / 400ms / 150ms 및 translation/rotation 범위 가속). 프라이팬 에셋 중앙 오프셋 적용(translateX: -0.02, translateY: 0.13).
+- 핵심 구현 방식: NowAlertOverlay 화면에서 요소들이 분리되어 움직이지 않고 한 몸처럼 흔들리도록 `Animated.View` 그룹핑 적용 및 `interpolate` 활용. FocusScreen 뿐 아니라 Idle 상태 디폴트 화면에서도 같은 `tomatoDot`을 사용하여 양쪽 모두 크게 보이도록 동시 대응.
+- 커밋: `de0e825`
 
 ---
 
