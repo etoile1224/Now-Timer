@@ -96,12 +96,12 @@ function DailySessionRow({
 const chartStyles = StyleSheet.create({
   container: { gap: 6 },
   dayRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 3 },
-  dayLabel: { fontSize: 11, fontFamily: 'KotraGothic', color: colors.mutedForeground, width: 36 },
+  dayLabel: { fontSize: 13, fontFamily: 'KotraGothic', color: colors.mutedForeground, width: 36 },
   tomatoRow: { flexDirection: 'row', alignItems: 'center', gap: 2, flex: 1 },
   tomatoIcon: { width: 20, height: 20 },
-  emptyDash: { fontSize: 14, color: colors.muted },
-  overflowText: { fontSize: 11, fontFamily: 'KotraGothic', color: colors.mutedForeground, marginLeft: 2 },
-  dayStat: { fontSize: 10, fontFamily: 'KotraGothic', color: colors.mutedForeground, width: 72, textAlign: 'right' },
+  emptyDash: { fontSize: 16, color: colors.muted },
+  overflowText: { fontSize: 13, fontFamily: 'KotraGothic', color: colors.mutedForeground, marginLeft: 2 },
+  dayStat: { fontSize: 12, fontFamily: 'KotraGothic', color: colors.mutedForeground, width: 72, textAlign: 'right' },
 });
 
 /* ── Main screen ── */
@@ -476,11 +476,11 @@ export function StatsScreen() {
                     ]}
                   >
                     <View style={[styles.leaderCell, { width: 28, flexDirection: 'row', alignItems: 'center', gap: 2 }]}>
-                      <Text style={{ fontSize: 13, fontFamily: 'KotraGothic' }}>{medal ?? `${i + 1}`}</Text>
+                      <Text style={{ fontSize: 15, fontFamily: 'KotraGothic' }}>{medal ?? `${i + 1}`}</Text>
                       {row.delta !== 0 && (
                         <Text
                           style={{
-                            fontSize: 9,
+                            fontSize: 11,
                             fontFamily: 'KotraBold',
                             color: row.delta > 0 ? colors.green500 : colors.red500,
                           }}
@@ -490,18 +490,18 @@ export function StatsScreen() {
                       )}
                     </View>
                     <View style={[styles.leaderCell, { flex: 1, flexDirection: 'row', gap: 4 }]}>
-                      <Text style={{ fontSize: 13, fontFamily: 'KotraGothic', color: colors.foreground }} numberOfLines={1}>
+                      <Text style={{ fontSize: 15, fontFamily: 'KotraGothic', color: colors.foreground }} numberOfLines={1}>
                         {row.nickname}
                       </Text>
                       {isMe && <Text style={{ fontSize: 12, color: colors.tomato }}>{t.stats_me}</Text>}
                     </View>
-                    <Text style={[styles.leaderCell, { width: 50, textAlign: 'right', fontSize: 13, fontFamily: 'Komputa-Regular', color: colors.foreground }]}>
+                    <Text style={[styles.leaderCell, { width: 50, textAlign: 'right', fontSize: 15, fontFamily: 'Komputa-Regular', color: colors.foreground }]}>
                       {row.compliance !== null ? `${row.compliance}%` : '-'}
                     </Text>
                     <Text
                       style={[
                         styles.leaderCell,
-                        { width: 80, textAlign: 'right', fontSize: 13, fontFamily: 'Komputa-Regular', color: rt?.color ?? colors.mutedForeground },
+                        { width: 80, textAlign: 'right', fontSize: 15, fontFamily: 'Komputa-Regular', color: rt?.color ?? colors.mutedForeground },
                       ]}
                     >
                       {rt ? `${rt.grade} ${msToSecStr(row.avgReactionMs, t.stats_sec)}` : '-'}
@@ -528,13 +528,13 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   title: {
-    fontSize: 24,
+    fontSize: 28,
     fontFamily: 'KotraBold',
     color: colors.foreground,
     letterSpacing: -0.5,
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontFamily: 'KotraBold',
     color: colors.foreground,
     marginTop: 8,
@@ -546,6 +546,8 @@ const styles = StyleSheet.create({
   tab: {
     flex: 1,
     paddingVertical: 8,
+    minHeight: 44,
+    justifyContent: 'center',
     borderRadius: 20,
     alignItems: 'center',
     backgroundColor: colors.muted,
@@ -554,7 +556,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.tomato,
   },
   tabText: {
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: 'KotraGothic',
     color: colors.mutedForeground,
   },
@@ -579,10 +581,10 @@ const styles = StyleSheet.create({
   streakTitle: {
     fontFamily: 'KotraBold',
     color: '#92400e',
-    fontSize: 14,
+    fontSize: 16,
   },
   streakSub: {
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: 'KotraGothic',
     color: '#b45309',
     marginTop: 2,
@@ -602,7 +604,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   statBoxLabel: {
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: 'KotraGothic',
     color: colors.mutedForeground,
   },
@@ -612,12 +614,12 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   statBoxValue: {
-    fontSize: 28,
+    fontSize: 32,
     fontFamily: 'Komputa-Bold',
     color: colors.foreground,
   },
   statBoxUnit: {
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: 'KotraGothic',
     color: colors.mutedForeground,
   },
@@ -635,7 +637,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   cardLabel: {
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: 'KotraGothic',
     color: colors.mutedForeground,
   },
@@ -748,7 +750,7 @@ const styles = StyleSheet.create({
   },
   leaderCell: {},
   leaderHeaderText: {
-    fontSize: 11,
+    fontSize: 13,
     fontFamily: 'KotraGothic',
     color: colors.mutedForeground,
   },

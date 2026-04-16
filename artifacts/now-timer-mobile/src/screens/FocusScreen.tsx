@@ -285,14 +285,14 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   dotWrapper: {
-    width: 36,
-    height: 36,
+    width: 64,
+    height: 64,
     alignItems: 'center',
     justifyContent: 'center',
   },
   tomatoDot: {
-    width: 36,
-    height: 36,
+    width: 64,
+    height: 64,
   },
   wavyBarRow: {
     alignItems: 'center',

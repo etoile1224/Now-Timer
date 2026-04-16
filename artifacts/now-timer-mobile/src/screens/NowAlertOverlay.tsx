@@ -191,37 +191,90 @@ function CookingTomatoes({ level }: { level: number }) {
   ];
 
   const panSize = SCREEN_WIDTH * 0.85;
+  const offsetX = -0.02 * panSize;
+  const offsetY = 0.13 * panSize;
+
+  const shakeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    let duration = 800; // Lv.1
+    if (level === 2) duration = 400;
+    else if (level >= 3) duration = 150;
+
+    const shake = Animated.loop(
+      Animated.sequence([
+        Animated.timing(shakeAnim, { toValue: 1, duration: duration / 4, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: -1, duration: duration / 2, useNativeDriver: true }),
+        Animated.timing(shakeAnim, { toValue: 0, duration: duration / 4, useNativeDriver: true }),
+      ])
+    );
+    shake.start();
+    return () => shake.stop();
+  }, [level, shakeAnim]);
+
+  let moveRange = 2;
+  let rotateRange = '2deg';
+  if (level === 2) {
+    moveRange = 5;
+    rotateRange = '4deg';
+  } else if (level >= 3) {
+    moveRange = 12;
+    rotateRange = '8deg';
+  }
+
+  const translateX = shakeAnim.interpolate({
+    inputRange: [-1, 1],
+    outputRange: [-moveRange, moveRange],
+  });
+
+  const rotateZ = shakeAnim.interpolate({
+    inputRange: [-1, 1],
+    outputRange: [`-${rotateRange}`, rotateRange],
+  });
 
   return (
-    <View style={[cookingStyles.container, { width: panSize, height: panSize }]}>
-      {/* Frying pan background */}
-      <Image
-        source={require('@/../assets/images/frypan.png')}
-        style={cookingStyles.frypan}
-        resizeMode="contain"
-      />
-      {/* Tomatoes on the pan — count increases with level */}
-      {positions.slice(0, tomatoCount).map((pos, i) => {
-        const tomatoSize = panSize * pos.size;
-        return (
-          <Image
-            key={i}
-            source={TOMATO_IMAGES[i % TOMATO_IMAGES.length]}
-            style={[
-              cookingStyles.tomato,
-              {
-                width: tomatoSize,
-                height: tomatoSize,
-                top: panSize * pos.top,
-                left: panSize * pos.left,
-                transform: [{ rotate: pos.rotate }],
-              },
-            ]}
-            resizeMode="contain"
-          />
-        );
-      })}
-
+    <View style={{ transform: [{ translateX: offsetX }, { translateY: offsetY }] }}>
+      <Animated.View
+        style={[
+          cookingStyles.container,
+          {
+            width: panSize,
+            height: panSize,
+            transform: [
+              { translateX },
+              { rotateZ },
+            ],
+          },
+        ]}
+      >
+        {/* Frying pan background */}
+        <Image
+          source={require('@/../assets/images/frypan.png')}
+          style={cookingStyles.frypan}
+          resizeMode="contain"
+        />
+        {/* Tomatoes on the pan — count increases with level */}
+        {positions.slice(0, tomatoCount).map((pos, i) => {
+          const tomatoSize = panSize * pos.size;
+          return (
+            <Image
+              key={i}
+              source={TOMATO_IMAGES[i % TOMATO_IMAGES.length]}
+              style={[
+                cookingStyles.tomato,
+                {
+                  width: tomatoSize,
+                  height: tomatoSize,
+                  top: panSize * pos.top,
+                  left: panSize * pos.left,
+                  transform: [{ rotate: pos.rotate }],
+                },
+              ]}
+              resizeMode="contain"
+            />
+          );
+        })}
+      </Animated.View>
     </View>
   );
 }

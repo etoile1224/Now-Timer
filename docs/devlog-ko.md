@@ -4,6 +4,13 @@
 
 ---
 
+## 2026-04-16 — feat(phase3): 폰트/요소 사이즈 가독성 개선 및 터치 영역 확대
+- **커밋**: (Pending)
+- **변경 파일**: `NumberInput.tsx`, `StatsScreen.tsx`, `SettingsScreen.tsx`
+- 앱 전반의 베이스 폰트 사이즈 +2~4pt 증대.
+- iOS HIG 규격에 맞춰 `NumberInput` 컨트롤, 탭, 토글 및 각종 버튼들의 터치 영역을 최소 44x44pt 보장하도록 수정.
+- 리더보드, 세션 통계 영역 등의 수치 가시성 대폭 상향.
+
 ## 2026-04-16 — feat(phase2): 픽셀 에디터 Undo + Pan 도구
 - **커밋**: `fb1c6aa`
 - **변경 파일**: `PixelEditor.tsx`, `i18n.ts`

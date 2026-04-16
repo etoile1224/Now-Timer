@@ -544,7 +544,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   headerTitle: {
-    fontSize: 22,
+    fontSize: 26,
     fontFamily: 'KotraBold',
     color: colors.foreground,
   },
@@ -585,7 +585,7 @@ const styles = StyleSheet.create({
     opacity: 0.5,
   },
   sectionTitle: {
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: 'KotraBold',
     color: colors.tomato,
     textTransform: 'uppercase',
@@ -593,7 +593,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   sectionDesc: {
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: 'KotraGothic',
     color: colors.mutedForeground,
     marginBottom: 12,
@@ -614,12 +614,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   toggleLabel: {
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: 'KotraBold',
     color: colors.foreground,
   },
   toggleDesc: {
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: 'KotraGothic',
     color: colors.mutedForeground,
     marginTop: 2,
@@ -654,12 +654,12 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   soundName: {
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: 'KotraBold',
     color: colors.foreground,
   },
   soundSub: {
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: 'KotraGothic',
     color: colors.mutedForeground,
   },
@@ -674,6 +674,8 @@ const styles = StyleSheet.create({
     gap: 4,
     paddingVertical: 10,
     paddingHorizontal: 8,
+    minHeight: 44,
+    justifyContent: 'center',
     borderRadius: 14,
     borderWidth: 1.5,
   },
@@ -683,11 +685,11 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   levelButtonLv: {
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: 'KotraBold',
   },
   levelButtonDesc: {
-    fontSize: 10,
+    fontSize: 12,
   },
   volumeRow: {
     flexDirection: 'row',
@@ -696,12 +698,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   volumeLabel: {
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: 'KotraGothic',
     color: colors.foreground,
   },
   volumeValue: {
-    fontSize: 14,
+    fontSize: 16,
     color: colors.mutedForeground,
   },
   volumeSliderRow: {
@@ -724,7 +726,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   volumeHint: {
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: 'KotraGothic',
     color: colors.mutedForeground,
     marginTop: 8,
@@ -737,6 +739,8 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     padding: 12,
+    minHeight: 44,
+    justifyContent: 'center',
     borderRadius: 14,
     borderWidth: 1.5,
     borderColor: colors.border,
@@ -747,12 +751,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF0E8',
   },
   escalationLabel: {
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: 'KotraBold',
     color: colors.foreground,
   },
   escalationDesc: {
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: 'KotraGothic',
     color: colors.mutedForeground,
     marginTop: 2,
@@ -763,12 +767,12 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   accountName: {
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: 'KotraBold',
     color: colors.foreground,
   },
   accountSub: {
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: 'KotraGothic',
     color: colors.mutedForeground,
     marginTop: 2,
@@ -779,10 +783,11 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 12,
     paddingVertical: 8,
+    minHeight: 44,
     borderRadius: 10,
   },
   logoutText: {
-    fontSize: 12,
+    fontSize: 14,
     fontFamily: 'KotraGothic',
     color: colors.destructive,
   },
@@ -793,6 +798,8 @@ const styles = StyleSheet.create({
   langButton: {
     flex: 1,
     paddingVertical: 12,
+    minHeight: 44,
+    justifyContent: 'center',
     borderRadius: 14,
     backgroundColor: colors.cream,
     borderWidth: 1.5,
@@ -804,7 +811,7 @@ const styles = StyleSheet.create({
     borderColor: colors.tomato,
   },
   langButtonText: {
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: 'KotraBold',
     color: colors.foreground,
   },
@@ -817,7 +824,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   aboutText: {
-    fontSize: 14,
+    fontSize: 16,
     fontFamily: 'KotraGothic',
     color: colors.mutedForeground,
     lineHeight: 22,
@@ -825,13 +832,15 @@ const styles = StyleSheet.create({
   smallButton: {
     paddingHorizontal: 14,
     paddingVertical: 8,
+    minHeight: 44,
+    justifyContent: 'center',
     backgroundColor: colors.cream,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: colors.border,
   },
   smallButtonText: {
-    fontSize: 13,
+    fontSize: 15,
     fontFamily: 'KotraBold',
     color: colors.foreground,
   },

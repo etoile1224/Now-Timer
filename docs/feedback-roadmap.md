@@ -49,19 +49,25 @@
 
 ---
 
-## Phase 3 — 폰트/요소 사이즈 가독성 [대기]
+## Phase 3 — 폰트/요소 사이즈 가독성 [완료]
 
 **목표**: 전반적으로 폰트와 인터랙션 요소 크기를 키워 가독성/탭 정확도 개선.
 
 **작업 항목**
-- [ ] 현재 사용 중인 폰트 사이즈 토큰 정리 (어디에 어떤 사이즈 쓰이는지 파악)
-- [ ] 베이스 사이즈를 +2~4pt 정도 일괄 상향 (실제 수치는 디자인 검토)
-- [ ] 버튼/탭 영역 최소 44x44pt 보장 (iOS HIG)
-- [ ] 통계 화면 숫자/라벨 우선 적용
-- [ ] 설정 화면 NumberInput 라벨 가독성 점검
+- [x] 현재 사용 중인 폰트 사이즈 토큰 정리 (어디에 어떤 사이즈 쓰이는지 파악)
+- [x] 베이스 사이즈를 +2~4pt 정도 일괄 상향 (실제 수치는 디자인 검토)
+- [x] 버튼/탭 영역 최소 44x44pt 보장 (iOS HIG)
+- [x] 통계 화면 숫자/라벨 우선 적용
+- [x] 설정 화면 NumberInput 라벨 가독성 점검
 
 **완료 기록**
-- (작업 진행 후 채움)
+- 일자: 2026-04-16
+- 변경 파일:
+  - `artifacts/now-timer-mobile/src/components/NumberInput.tsx` (버튼 사이즈 44px 보장, 텍스트 사이즈 상향)
+  - `artifacts/now-timer-mobile/src/screens/StatsScreen.tsx` (폰트 +2pt 일괄 증대, 탭 최소 터치 영역 보장)
+  - `artifacts/now-timer-mobile/src/screens/SettingsScreen.tsx` (폰트 단위 상향, level/escalation/lang 토글 버튼들 HIG 44px 대응)
+- 핵심 구현 방식: inline style 및 StyleSheet에 하드코딩된 fontSize 및 minHeight 수치들을 전수 조사하여 상향 반영함. (탭 제스처 시 사용자 터치 미스율 감소 기대)
+- 커밋: (Pending Commit)
 
 ---
 

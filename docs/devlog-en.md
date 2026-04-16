@@ -4,6 +4,13 @@
 
 ---
 
+## 2026-04-16 — feat(phase3): Improve font/element size readability and expand touch targets
+- **Commit**: (Pending)
+- **Files**: `NumberInput.tsx`, `StatsScreen.tsx`, `SettingsScreen.tsx`
+- Increased base font size by +2~4pt across the app.
+- Ensured minimum touch targets of 44x44pt for `NumberInput` controls, tabs, toggles, and buttons according to iOS HIG.
+- Significantly improved visibility of numbers in team leaderboard and session stats.
+
 ## 2026-04-16 — feat(phase2): Pixel editor Undo + Pan tool
 - **Commit**: `fb1c6aa`
 - **Files**: `PixelEditor.tsx`, `i18n.ts`
