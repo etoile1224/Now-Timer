@@ -282,18 +282,15 @@ cd /Users/saebyolkim/Downloads/Time-Tracker-Viz/.claude/worktrees/vibrant-fermi/
 ## 12. 배포
 
 - **백엔드**: Railway (Docker, 자동 배포, `/api/healthz`)
-- **모바일**: EAS Build — internal (Ad Hoc) 배포
+- **모바일**: EAS Build — internal (Ad Hoc) 배포, iOS 빌드 성공 (2026-04)
   - `cd /Users/saebyolkim/Downloads/Time-Tracker-Viz/.claude/worktrees/vibrant-fermi/artifacts/now-timer-mobile && eas build --profile preview --platform ios`
-  - Apple Developer 승인 완료 (2026-04)
+  - Apple Developer 승인 완료, 테스터 5명 디바이스 등록 완료
 
 ---
 
 ## 13. 현재 TODO
 
-- [ ] 사진→도트 아바타 변환 품질 개선 중 (72색 팔레트 + Lab + Floyd-Steinberg)
-- [ ] NumberInput 드래그 동작 점검 (PanResponder 기반)
-- [ ] RLS 미적용 — 프로덕션 전 활성화 필요
-- [ ] 피드백 로드맵 Phase 3~6 진행 중 (`docs/feedback-roadmap.md` 참조)
+- [ ] RLS 미적용 — 프로덕션 전 활성화 필요 (DB 보안)
 
 ---
 
