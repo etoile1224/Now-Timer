@@ -98,6 +98,8 @@ function MainTabs() {
   );
 }
 
+import { navigationRef } from '@/lib/navigation';
+
 function AppContent() {
   const { user, isLoading } = useAuth();
 
@@ -121,7 +123,7 @@ function AppContent() {
     <TimerProvider>
       <SocialProvider>
         <StatsTracker />
-        <NavigationContainer>
+        <NavigationContainer ref={navigationRef}>
           <MainTabs />
         </NavigationContainer>
         <NowAlertLayer />

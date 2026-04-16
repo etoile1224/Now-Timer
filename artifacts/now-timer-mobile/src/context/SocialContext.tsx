@@ -249,11 +249,18 @@ export function SocialProvider({ children }: { children: React.ReactNode }) {
       }
     }
 
+    function handlePushTap(data: Record<string, unknown> | undefined) {
+      if (!data?.type) return;
+      // 사용자가 푸시 알림을 직접 누른 경우 'Social' 화면으로 이동
+      require('@/lib/navigation').navigate('Social');
+      handlePushData(data);
+    }
+
     const sub = Notifications.addNotificationReceivedListener((notification) => {
       handlePushData(notification.request.content.data as Record<string, unknown> | undefined);
     });
     const responseSub = Notifications.addNotificationResponseReceivedListener((response) => {
-      handlePushData(response.notification.request.content.data as Record<string, unknown> | undefined);
+      handlePushTap(response.notification.request.content.data as Record<string, unknown> | undefined);
     });
     return () => {
       sub.remove();

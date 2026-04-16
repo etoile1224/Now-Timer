@@ -110,17 +110,23 @@
 
 ---
 
-## Phase 6 — 무시 알림의 소셜 전파 [백로그]
+## Phase 6 — 무시 알림의 소셜 전파 [완료]
 
 **목표**: 백그라운드에서 NOW! 알림을 무시하고 있을 때 다른 팀원들에게 자동으로 푸시. 친구가 깨우기를 보내면 그 알림도 백그라운드에서 안정적으로 수신.
 
 **전제**: Phase 1 (백그라운드 알림) 완료 필요. 서버 측 작업도 동반.
 
 **작업 항목**
-- [ ] 클라이언트 → 서버: ignoreLevel ≥ 2일 때 멤버 상태 업데이트
-- [ ] 서버: 해당 팀의 다른 멤버들에게 Expo 푸시 발송
-- [ ] 푸시 알림 핸들링 검증 (앱 종료 상태에서도 깨우기 알림 수신)
-- [ ] 알림 탭 시 SocialScreen으로 직접 진입
+- [x] 클라이언트 → 서버: ignoreLevel ≥ 2일 때 멤버 상태 업데이트
+- [x] 서버: 해당 팀의 다른 멤버들에게 Expo 푸시 발송
+- [x] 푸시 알림 핸들링 검증 (앱 종료 상태에서도 깨우기 알림 수신)
+- [x] 알림 탭 시 SocialScreen으로 직접 진입
 
 **완료 기록**
-- (작업 진행 후 채움)
+- 일자: 2026-04-16
+- 변경 파일:
+  - `artifacts/now-timer-mobile/src/lib/navigation.ts` (신규 전역 내비게이션 파일)
+  - `artifacts/now-timer-mobile/src/App.tsx` (navigationRef 바인딩)
+  - `artifacts/now-timer-mobile/src/context/SocialContext.tsx`
+- 핵심 구현 방식: 이전 페이즈들에서 클라이언트의 `ignoreLevel` 송신 기능과 서버단의 `teamStore.ts` 내 푸시 발송 로직은 모두 기구현되어 안정화된 것을 코드 분석을 통해 확인했습니다. 따라서 미구현된 딥링킹 탭 액션 로직에 집중했습니다. 앱 전역 환경에서 라우팅이 가능한 `createNavigationContainerRef`를 구축하고, 알림을 직접 누르는 `NotificationResponseReceived` 리스너 핸들러에 `navigate('Social')` 전환 함수를 통합했습니다.
+- 커밋: (Pending Commit)

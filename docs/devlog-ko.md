@@ -4,6 +4,12 @@
 
 ---
 
+## 2026-04-16 — feat(phase6): 푸시 알람 탭 시 자동 화면 전환(딥링킹)
+- **커밋**: (Pending)
+- **변경 파일**: `navigation.ts`, `App.tsx`, `SocialContext.tsx`
+- 백그라운드 푸시 알람 수신 후 배너를 **탭(Tap)** 하였을 때, 즉시 `SocialScreen` 탭으로 강제 이동(Deep link) 하도록 변경(방해금지 상태라도 강제 탭인 경우 허용).
+- 외부 리스너에서 내비게이션 조작을 위해 `createNavigationContainerRef()` 활용.
+
 ## 2026-04-16 — fix(phase5): NOW 상태 컴포넌트 떨림(Jitter) 현상 고정
 - **커밋**: `e56797c`
 - **변경 파일**: `NowAlertOverlay.tsx`
