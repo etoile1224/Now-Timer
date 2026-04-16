@@ -4,6 +4,12 @@
 
 ---
 
+## 2026-04-16 — fix(phase5): NOW 상태 컴포넌트 떨림(Jitter) 현상 고정
+- **커밋**: (Pending)
+- **변경 파일**: `NowAlertOverlay.tsx`
+- 에스컬레이션 바의 초 단위 텍스트 업데이트 과정에서 폰트 렌더링에 의해 발생하는 전체 레이아웃의 상하 요동침(Jitter) 해결.
+- `countdownText` 스타일 및 전체 footerHint 영역에 `minHeight` 적용, 숫자의 너비 변동 차단을 위한 `tabular-nums` 적용.
+
 ## 2026-04-16 — feat(phase4): 후라이팬 + 토마토 시각 디테일 (에스컬레이션 애니메이션)
 - **커밋**: `de0e825`
 - **변경 파일**: `FocusScreen.tsx`, `NowAlertOverlay.tsx`

@@ -4,6 +4,12 @@
 
 ---
 
+## 2026-04-16 — fix(phase5): Fix layout jitter in NOW! state components
+- **Commit**: (Pending)
+- **Files**: `NowAlertOverlay.tsx`
+- Fixed vertical layout jitter caused by per-second countdown text updates triggering flex container height recalculation.
+- Applied `minHeight` bound to `countdownText` and the overall footer hint section, and added `tabular-nums` `fontVariant` to prevent dynamic width scaling for numbers.
+
 ## 2026-04-16 — feat(phase4): Frying pan + Tomato visual detail (Escalation animation)
 - **Commit**: `de0e825`
 - **Files**: `FocusScreen.tsx`, `NowAlertOverlay.tsx`

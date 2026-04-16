@@ -165,6 +165,9 @@ const escalationStyles = StyleSheet.create({
   countdownText: {
     textAlign: 'right',
     fontSize: 11,
+    fontFamily: 'KotraGothic',
+    fontVariant: ['tabular-nums'],
+    minHeight: 16,
     color: 'rgba(255,255,255,0.4)',
   },
 });
@@ -444,16 +447,17 @@ export function NowAlertOverlay({ type }: NowAlertOverlayProps) {
           </View>
 
           {/* Footer hint */}
-          {level < 3 && (
-            <Text style={styles.footerHint}>
-              {t.now_footerHint}
-            </Text>
-          )}
-          {level >= 3 && (
-            <Text style={styles.footerHintStrong}>
-              {t.now_footerStrong}
-            </Text>
-          )}
+          <View style={{ minHeight: 18, justifyContent: 'center', alignItems: 'center' }}>
+            {level < 3 ? (
+              <Text style={styles.footerHint}>
+                {t.now_footerHint}
+              </Text>
+            ) : (
+              <Text style={styles.footerHintStrong}>
+                {t.now_footerStrong}
+              </Text>
+            )}
+          </View>
         </View>
       </View>
     </Modal>

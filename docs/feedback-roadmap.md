@@ -92,17 +92,21 @@
 
 ---
 
-## Phase 5 — NOW! 상태 컴포넌트 떨림 고정 [대기]
+## Phase 5 — NOW! 상태 컴포넌트 떨림 고정 [완료]
 
 **목표**: NOW! 상태일 때 의도치 않게 흔들리는 컴포넌트 고정. (Phase 4의 후라이팬 흔들기는 의도된 동작이므로 별개)
 
 **작업 항목**
-- [ ] 어느 컴포넌트가 흔들리는지 식별 (테스터에게 영상/스크린샷 요청 필요)
-- [ ] 레이아웃 jitter 원인 진단 (텍스트 길이 변화? 상태 전환 시 layout shift?)
-- [ ] 고정 사이즈 컨테이너로 감싸 안정화
+- [x] 어느 컴포넌트가 흔들리는지 식별 (테스터에게 영상/스크린샷 요청 필요) -> EscalationBar countdownText 확인 완료
+- [x] 레이아웃 jitter 원인 진단 (텍스트 길이 변화? 상태 전환 시 layout shift?) -> 1초 단위 텍스트 렌더링 변경으로 인한 부모 컨테이너 크기 재계산에 기인한 shift 발견.
+- [x] 고정 사이즈 컨테이너로 감싸 안정화
 
 **완료 기록**
-- (작업 진행 후 채움)
+- 일자: 2026-04-16
+- 변경 파일:
+  - `artifacts/now-timer-mobile/src/screens/NowAlertOverlay.tsx`
+- 핵심 구현 방식: 플렉스박스(`justifyContent: 'center'`) 배치에 의해 1픽셀이라도 높이가 바뀌면 전체 레이아웃이 널뛰기하는 Jitter 증상이었습니다. 초마다 바뀌는 `EscalationBar` 컴포넌트의 시간 텍스트 부분에 `fontVariant: ['tabular-nums']`와 강제 조절 박스(`minHeight: 16`)를 씌우고 추가 안내문(`footerHint`) 영역 역시 `minHeight: 18` 고정 처리하여 떨림을 원천 차단했습니다.
+- 커밋: (Pending Commit)
 
 ---
 
