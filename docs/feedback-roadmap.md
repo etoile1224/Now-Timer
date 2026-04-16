@@ -149,4 +149,4 @@
   - `artifacts/now-timer-mobile/src/components/EscalationBar.tsx` (신규)
   - `artifacts/now-timer-mobile/src/screens/NowAlertOverlay.tsx` (인라인 → import)
 - 핵심 구현 방식: 이전 세션에서 분리 파일 2개는 이미 생성되었으나 NowAlertOverlay.tsx에서 import 교체가 안 된 상태였음. 인라인 함수(CookingTomatoes + cookingStyles, EscalationBar + escalationStyles) 약 244줄 제거 후 import 2줄로 교체. 동작 변화 없음 (순수 구조 리팩토링).
-- 커밋: (커밋 후 채움)
+- 커밋: `17067d4`

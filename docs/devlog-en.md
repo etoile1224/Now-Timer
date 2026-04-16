@@ -5,7 +5,7 @@
 ---
 
 ## 2026-04-16 — refactor(phase7): Extract CookingTomatoes & EscalationBar from NowAlertOverlay
-- **Commit**: (post-commit)
+- **Commit**: `17067d4`
 - **Files**: `NowAlertOverlay.tsx`, `CookingTomatoes.tsx` (new), `EscalationBar.tsx` (new)
 - Reduced `NowAlertOverlay.tsx` from 584 to 340 lines (-42%). Extracted CookingTomatoes (frying pan + shake animation) and EscalationBar (ignore dots + progress bar + countdown) into standalone components. Pure structural refactor with no behavior change.
 
